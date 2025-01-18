@@ -1,0 +1,28 @@
+{% extends "shared/base.html" %}
+
+{% block title %}Welcome to Virtual Try-On{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-[70vh]">
+    <div class="max-w-xl text-center space-y-8">
+        <h1 class="text-4xl font-bold text-gray-800">Welcome to Virtual Try-On</h1>
+        <p class="text-gray-600">
+            Seamlessly experience the power of virtual fashion. Explore as an administrator, store manager, or customer.
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <!-- Admin Link -->
+            <a href="#" class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition">
+                Admin Dashboard
+            </a>
+            <!-- Store Link -->
+            <a href="#" class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition">
+                Store Dashboard
+            </a>
+            <!-- Customer Link -->
+            <a href="#" class="bg-purple-500 text-white px-6 py-3 rounded-lg hover:bg-purple-600 transition">
+                Customer Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

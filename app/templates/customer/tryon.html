@@ -1,0 +1,96 @@
+{% extends "shared/base.html" %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">Customer Dashboard</h1>
+
+        <!-- Credit Balance -->
+        <div class="bg-white shadow rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Your Credits</h2>
+            <div class="text-3xl font-bold text-blue-600">{{ current_user.store.credit_balance }}</div>
+            <p class="text-gray-600 mt-2">Available credits for virtual try-ons</p>
+        </div>
+
+        <!-- Quick Try-On Access -->
+        <div class="bg-white shadow rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Quick Actions</h2>
+            <a href="{{ url_for('customer.tryon') }}" 
+               class="inline-block bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors">
+                New Virtual Try-On
+            </a>
+        </div>
+
+        <!-- Try-On History -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4">Your Try-On History</h2>
+            <div class="space-y-4">
+                {% if try_ons %}
+                    {% for try_on in try_ons %}
+                    <div class="border rounded-lg p-4">
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <img src="{{ try_on.model_image }}" alt="Model" class="w-full h-32 object-cover rounded">
+                                <p class="text-sm text-gray-600 mt-1">Model Image</p>
+                            </div>
+                            <div>
+                                <img src="{{ try_on.garment_image }}" alt="Garment" class="w-full h-32 object-cover rounded">
+                                <p class="text-sm text-gray-600 mt-1">Garment</p>
+                            </div>
+                            <div>
+                                <img src="{{ try_on.result_image }}" alt="Result" class="w-full h-32 object-cover rounded">
+                                <p class="text-sm text-gray-600 mt-1">Result</p>
+                            </div>
+                        </div>
+                        <div class="mt-2 flex justify-between items-center">
+                            <div class="text-sm text-gray-600">
+                                {{ try_on.created_at.strftime('%B %d, %Y') }}
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                Category: {{ try_on.category }}
+                            </div>
+                            <a href="{{ url_for('download_result', try_on_id=try_on.id) }}" 
+                               class="text-blue-500 hover:text-blue-700">
+                                Download Result
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-8 text-gray-500">
+                        <p>No try-ons yet. Start your first virtual try-on now!</p>
+                        <a href="{{ url_for('customer.tryon') }}" 
+                           class="inline-block mt-4 text-blue-500 hover:text-blue-700">
+                            Try Now
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+
+            {% if try_ons %}
+            <!-- Pagination -->
+            <div class="mt-6 flex justify-center">
+                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                    {% if page > 1 %}
+                    <a href="?page={{ page - 1 }}" 
+                       class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        Previous
+                    </a>
+                    {% endif %}
+                    
+                    <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                        Page {{ page }} of {{ total_pages }}
+                    </span>
+                    
+                    {% if page < total_pages %}
+                    <a href="?page={{ page + 1 }}" 
+                       class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        Next
+                    </a>
+                    {% endif %}
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

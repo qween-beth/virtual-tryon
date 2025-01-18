@@ -1,0 +1,59 @@
+{% extends "shared/base.html" %}
+
+{% block title %}Manage Stores{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold mb-6">Manage Stores</h1>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="p-4 mb-4 rounded-md {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Stores Table -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <table class="min-w-full table-auto text-left border-collapse border border-gray-200">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="py-2 px-4 border border-gray-200">Store Name</th>
+                    <th class="py-2 px-4 border border-gray-200">Subscription Plan</th>
+                    <th class="py-2 px-4 border border-gray-200">Credits Available</th>
+                    <th class="py-2 px-4 border border-gray-200">Status</th>
+                    <th class="py-2 px-4 border border-gray-200">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for store in stores %}
+                <tr>
+                    <td class="py-2 px-4 border border-gray-200">{{ store.name }}</td>
+                    <td class="py-2 px-4 border border-gray-200">{{ store.subscription_plan }}</td>
+                    <td class="py-2 px-4 border border-gray-200 text-center">{{ store.credit_balance }}</td>
+                    <td class="py-2 px-4 border border-gray-200">
+                        <span class="{% if store.is_active %}text-green-600{% else %}text-red-600{% endif %}">
+                            {{ 'Active' if store.is_active else 'Inactive' }}
+                        </span>
+                    </td>
+                    <td class="py-2 px-4 border border-gray-200">
+                        <form action="{{ url_for('admin.stores') }}" method="POST" class="inline">
+                            <input type="hidden" name="store_id" value="{{ store.id }}">
+                            <input type="hidden" name="is_active" value="{{ not store.is_active }}">
+                            <button type="submit" class="text-sm px-3 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600">
+                                {{ 'Activate' if not store.is_active else 'Deactivate' }}
+                            </button>
+                        </form>
+                        
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

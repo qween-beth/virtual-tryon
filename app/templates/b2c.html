@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buy TryOn Credits</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="bg-primary text-white py-3">
+        <div class="container d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0">TryOn Credit Purchase</h1>
+            <nav>
+                <a href="/" class="text-white text-decoration-none me-3">Home</a>
+                <a href="/account" class="text-white text-decoration-none me-3">My Account</a>
+                <a href="/support" class="text-white text-decoration-none">Support</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container mt-5">
+        <h2 class="text-center">Buy TryOn Credits</h2>
+        <form id="creditForm" method="POST" action="/purchase_credits" class="mt-4">
+            <div class="mb-3">
+                <label for="dollarAmount" class="form-label">Enter Amount in Dollars ($):</label>
+                <input type="number" class="form-control" id="dollarAmount" name="dollar_amount" required>
+            </div>
+            <div class="mb-3">
+                <label for="tryonCredits" class="form-label">Equivalent TryOn Credits:</label>
+                <input type="text" class="form-control" id="tryonCredits" readonly>
+            </div>
+            <button type="submit" class="btn btn-primary">Purchase Credits</button>
+        </form>
+    </div>
+
+    <script>
+        // Update TryOn credits dynamically as the user inputs the dollar amount
+        const dollarInput = document.getElementById("dollarAmount");
+        const creditsOutput = document.getElementById("tryonCredits");
+
+        dollarInput.addEventListener("input", () => {
+            const dollarValue = parseFloat(dollarInput.value) || 0;
+            const tryonCredits = dollarValue * 2; // Conversion rate: 1 dollar = 2 TryOn credits
+            creditsOutput.value = tryonCredits;
+        });
+
+        // Optional: Add AJAX request to submit form dynamically
+        document.getElementById("creditForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const dollarValue = parseFloat(dollarInput.value);
+
+            if (isNaN(dollarValue) || dollarValue <= 0) {
+                alert("Please enter a valid dollar amount.");
+                return;
+            }
+
+            try {
+                const response = await axios.post("/purchase_credits", {
+                    dollar_amount: dollarValue
+                });
+
+                if (response.data.success) {
+                    alert(`Success! You've purchased ${response.data.credits_purchased} TryOn credits.`);
+                    dollarInput.value = "";
+                    creditsOutput.value = "";
+                } else {
+                    alert(`Error: ${response.data.error}`);
+                }
+            } catch (error) {
+                console.error(error);
+                alert("An error occurred while processing your purchase.");
+            }
+        });
+    </script>
+</body>
+</html>

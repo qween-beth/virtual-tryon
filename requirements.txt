@@ -1,0 +1,14 @@
+Flask
+fal-client
+Pillow
+requests
+Flask-SQLAlchemy
+Flask-Migrate
+Flask-RESTful
+python-dotenv
+asyncio
+Werkzeug
+flask-login
+psycopg2-binary
+flask_sqlalchemy
+gunicorn

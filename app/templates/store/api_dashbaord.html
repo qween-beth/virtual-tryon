@@ -1,0 +1,45 @@
+{% extends "shared/base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">API Dashboard</h1>
+
+        <!-- API Keys -->
+        <div class="bg-white shadow rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Your API Key</h2>
+            <div class="bg-gray-100 border rounded p-4">
+                <span class="text-blue-600 font-mono">{{ current_user.store.api_key }}</span>
+            </div>
+            <p class="text-gray-600 mt-2">Use this API key for authenticating requests.</p>
+        </div>
+
+        <!-- API Usage -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4">API Usage Statistics</h2>
+            <table class="min-w-full table-auto text-left border-collapse border border-gray-200">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="py-2 px-4 border border-gray-200">Endpoint</th>
+                        <th class="py-2 px-4 border border-gray-200">Requests</th>
+                        <th class="py-2 px-4 border border-gray-200">Last Used</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in api_usage %}
+                        <tr>
+                            <td class="py-2 px-4 border border-gray-200">{{ stat.endpoint }}</td>
+                            <td class="py-2 px-4 border border-gray-200">{{ stat.requests }}</td>
+                            <td class="py-2 px-4 border border-gray-200">{{ stat.last_used.strftime('%Y-%m-%d') }}</td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="3" class="py-4 text-center text-gray-500">No API usage data</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

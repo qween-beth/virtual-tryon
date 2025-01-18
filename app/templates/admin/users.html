@@ -1,0 +1,76 @@
+{% extends "shared/base.html" %}
+
+{% block title %}Manage Users{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold mb-6">Manage Users</h1>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="p-4 mb-4 rounded-md {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Users Table -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <table class="min-w-full table-auto text-left border-collapse border border-gray-200">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="py-2 px-4 border border-gray-200">Email</th>
+                    <th class="py-2 px-4 border border-gray-200">Role</th>
+                    <th class="py-2 px-4 border border-gray-200">Store</th>
+                    <th class="py-2 px-4 border border-gray-200">Status</th>
+                    <th class="py-2 px-4 border border-gray-200">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td class="py-2 px-4 border border-gray-200">{{ user.email }}</td>
+                    <td class="py-2 px-4 border border-gray-200 capitalize">{{ user.role }}</td>
+                    <td class="py-2 px-4 border border-gray-200">
+                        {% if user.store %}
+                            {{ user.store.name }}
+                        {% else %}
+                            <span class="text-gray-500">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-2 px-4 border border-gray-200">
+                        <span class="{% if user.is_active %}text-green-600{% else %}text-red-600{% endif %}">
+                            {{ 'Active' if user.is_active else 'Inactive' }}
+                        </span>
+                    </td>
+                    <td class="py-2 px-4 border border-gray-200">
+                        <form action="{{ url_for('admin.users') }}" method="POST" class="inline">
+                            <input type="hidden" name="user_id" value="{{ user.id }}">
+                            <input type="hidden" name="is_active" value="{{ not user.is_active }}">
+                            <button type="submit" class="text-sm px-3 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600">
+                                {{ 'Activate' if not user.is_active else 'Deactivate' }}
+                            </button>
+                        </form>
+                        {% if user.role != 'admin' %}
+                        <form action="{{ url_for('admin.change_role') }}" method="POST" class="inline ml-2">
+                            <input type="hidden" name="user_id" value="{{ user.id }}">
+                            <select name="role" class="text-sm rounded-lg border-gray-300 shadow-sm">
+                                <option value="store" {% if user.role == 'store' %}selected{% endif %}>Store</option>
+                                <option value="customer" {% if user.role == 'customer' %}selected{% endif %}>Customer</option>
+                            </select>
+                            <button type="submit" class="text-sm px-3 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600">
+                                Update Role
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
