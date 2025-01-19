@@ -12,3 +12,4 @@ flask-login
 psycopg2-binary
 flask_sqlalchemy
 gunicorn
+jsonify
