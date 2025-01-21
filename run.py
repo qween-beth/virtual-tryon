@@ -16,6 +16,12 @@ from hypercorn.config import Config
 from hypercorn.asyncio import serve
 
 
+from app import create_app
+from app.core.models import db
+from werkzeug.security import generate_password_hash
+import os
+from dotenv import load_dotenv
+
 # Load environment variables
 load_dotenv()
 
@@ -106,28 +112,11 @@ def seed_database(app):
         print(f"Error seeding database: {str(e)}")
         raise
 
-async def main():
-    """
-    Main application entry point.
-    Sets up and runs the application server.
-    """
-    try:
-        # Configure Hypercorn
-        config = Config()
-        config.bind = ["localhost:5000"]
-        
-        # Initialize app
-        app = create_app()
-        
-        # Seed the database
-        seed_database(app)
-        
-        print("Starting server on http://localhost:5000")
-        await serve(app, config)
-        
-    except Exception as e:
-        print(f"Error starting application: {str(e)}")
-        raise
+# Create the application instance
+app = create_app()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # Seed the database when running directly
+    seed_database(app)
+    # Run the app in development mode
+    app.run(host='localhost', port=5000)
