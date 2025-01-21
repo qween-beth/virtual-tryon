@@ -1,83 +1,120 @@
 {% extends "shared/base.html" %}
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-4xl mx-auto">
-        <h1 class="text-2xl font-bold mb-8">Virtual Try-On</h1>
-        
-        {% if error %}
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {{ error }}
-        </div>
-        {% endif %}
-
-        {% if current_user.role == 'store' %}
-        <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4">
-            Available Credits: {{ current_user.store.credit_balance }}
-        </div>
-        {% endif %}
-
-        <form method="POST" enctype="multipart/form-data" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="model_image">
-                    Model Image
-                </label>
-                <input type="file" name="model_image" id="model_image" accept="image/*" required
-                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+<div class="min-h-screen bg-gray-50 py-12">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- Header Section -->
+            <div class="text-center mb-12">
+                <h1 class="text-4xl font-extrabold text-gray-900 mb-4">Virtual Try-On</h1>
+                <p class="text-lg text-gray-600">Experience clothes virtually before you buy them</p>
             </div>
             
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="garment_image">
-                    Garment Image
-                </label>
-                <input type="file" name="garment_image" id="garment_image" accept="image/*" required
-                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            <!-- Alerts Section -->
+            {% if error %}
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg mb-6 animate-fade-in">
+                <div class="flex items-center">
+                    <svg class="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                    {{ error }}
+                </div>
             </div>
-            
-            <div class="mb-6">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="category">
-                    Garment Category
-                </label>
-                <select name="category" id="category" required
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                    <option value="top">Top</option>
-                    <option value="bottom">Bottom</option>
-                    <option value="dress">Dress</option>
-                </select>
-            </div>
-            
-            <div class="flex items-center justify-between">
-                <button type="submit"
-                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                    Generate Try-On
-                </button>
-            </div>
-        </form>
+            {% endif %}
 
-        {% if output_image_url %}
-        <div class="mt-8">
-            <h2 class="text-xl font-bold mb-4">Results</h2>
-            <div class="grid grid-cols-3 gap-4">
-                {% if model_image_url %}
-                <div>
-                    <h3 class="text-lg font-semibold mb-2">Model Image</h3>
-                    <img src="{{ model_image_url }}" alt="Model" class="w-full rounded shadow">
-                </div>
-                {% endif %}
-                
-                {% if garment_image_url %}
-                <div>
-                    <h3 class="text-lg font-semibold mb-2">Garment Image</h3>
-                    <img src="{{ garment_image_url }}" alt="Garment" class="w-full rounded shadow">
-                </div>
-                {% endif %}
-                
-                <div>
-                    <h3 class="text-lg font-semibold mb-2">Try-On Result</h3>
-                    <img src="{{ output_image_url }}" alt="Result" class="w-full rounded shadow">
+            {% if current_user.role == 'store' %}
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg mb-6">
+                <div class="flex items-center">
+                    <svg class="h-5 w-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    <span class="text-blue-700 font-medium">Available Credits: {{ current_user.store.credit_balance }}</span>
                 </div>
             </div>
+            {% endif %}
+
+            <!-- Main Form -->
+            <div class="bg-white rounded-xl shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
+                <div class="p-8">
+                    <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                        <!-- Model Image Upload -->
+                        <div>
+                            <label class="block text-gray-700 text-sm font-semibold mb-2" for="model_image">
+                                Model Image
+                            </label>
+                            <div class="relative">
+                                <input type="file" name="model_image" id="model_image" accept="image/*" required
+                                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition duration-150">
+                            </div>
+                        </div>
+                        
+                        <!-- Garment Image Upload -->
+                        <div>
+                            <label class="block text-gray-700 text-sm font-semibold mb-2" for="garment_image">
+                                Garment Image
+                            </label>
+                            <div class="relative">
+                                <input type="file" name="garment_image" id="garment_image" accept="image/*" required
+                                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition duration-150">
+                            </div>
+                        </div>
+                        
+                        <!-- Category Selection -->
+                        <div>
+                            <label class="block text-gray-700 text-sm font-semibold mb-2" for="category">
+                                Garment Category
+                            </label>
+                            <select name="category" id="category" required
+                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="top">Top</option>
+                                <option value="bottom">Bottom</option>
+                                <option value="dress">Dress</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="pt-4">
+                            <button type="submit"
+                                class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform transition-all duration-150 hover:scale-[1.02]">
+                                Generate Try-On
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            {% if output_image_url %}
+            <div class="mt-12">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Results</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {% if model_image_url %}
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:scale-[1.02]">
+                        <div class="p-4">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">Model Image</h3>
+                            <img src="{{ model_image_url }}" alt="Model" class="w-full h-64 object-cover rounded-lg">
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if garment_image_url %}
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:scale-[1.02]">
+                        <div class="p-4">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">Garment Image</h3>
+                            <img src="{{ garment_image_url }}" alt="Garment" class="w-full h-64 object-cover rounded-lg">
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:scale-[1.02]">
+                        <div class="p-4">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">Try-On Result</h3>
+                            <img src="{{ output_image_url }}" alt="Result" class="w-full h-64 object-cover rounded-lg">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
 </div>
 {% endblock %}
