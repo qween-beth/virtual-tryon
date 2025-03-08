@@ -1,3 +1,4 @@
+#app/init.py
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
@@ -9,7 +10,7 @@ from app.store import store_bp
 from app.customer import customer_bp
 from app.auth.routes import auth_bp
 from app.main import main_bp  # Add this line
-
+import os
 
 # Initialize extensions
 login_manager = LoginManager()
@@ -33,6 +34,18 @@ def create_app(config_name='config.DevelopmentConfig'):
     login_manager.init_app(app)
     Migrate(app, db)
 
+    # Set up upload folders
+    UPLOAD_FOLDER = 'static/uploads'
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    os.makedirs(os.path.join(app.static_folder, 'tryon-images'), exist_ok=True)
+
+    # Import blueprints here to avoid circular imports
+    from app.api.errors import register_error_handlers
+    from app.admin import admin_bp
+    from app.store import store_bp
+    from app.customer import customer_bp
+    from app.auth.routes import auth_bp
+    from app.main import main_bp
 
     # Register blueprints
     app.register_blueprint(main_bp)  # No URL prefix for main blueprint
@@ -40,7 +53,6 @@ def create_app(config_name='config.DevelopmentConfig'):
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(store_bp, url_prefix='/store')
     app.register_blueprint(customer_bp, url_prefix='/customer')
-
 
     # Register error handlers
     register_error_handlers(app)

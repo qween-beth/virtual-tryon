@@ -2,7 +2,7 @@ from flask import render_template, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
 from . import admin_bp
 from .services import allocate_credits_to_store, update_subscription_plan, generate_api_key, revoke_api_key
-from app.core.models import Store, db, Store, Feature, User
+from app.core.models import Store, db, Store, Feature, User, CreditTransaction
 from app.core.database import db
 
 
@@ -123,6 +123,40 @@ def users():
     users = User.query.all()
     return render_template('admin/users.html', users=users)
 
+@admin_bp.route('/update_user_credits', methods=['POST'])
+@login_required
+def update_user_credits():
+    if not current_user.is_admin():
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    user_id = request.form.get('user_id')
+    amount = request.form.get('amount', type=int)
+    
+    if not user_id or not amount:
+        return jsonify({'error': 'Missing user_id or amount'}), 400
+        
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+        
+    # Record the transaction
+    transaction = CreditTransaction(
+        from_user_id=current_user.id,
+        to_user_id=user.id,
+        amount=amount,
+        transaction_type='admin_adjustment'
+    )
+    
+    # Update user's balance
+    user.credit_balance += amount
+    
+    db.session.add(transaction)
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'new_balance': user.credit_balance
+    })
 
 @admin_bp.route('/credits', methods=['POST'])
 @login_required

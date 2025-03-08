@@ -1,108 +1,203 @@
 import os
+from flask import current_app
+from flask_login import current_user
+from werkzeug.utils import secure_filename
+from app.core.models import User, Store, TryOn
+from app.core.database import db
 from app.utils.tryon import process_tryon
 from app.utils.helpers import save_file
-from app.core.database import db
-from app.core.models import User, Store, TryOn
-from werkzeug.utils import secure_filename
+from app.utils.helpers import normalize_category
+import asyncio
 
-UPLOAD_FOLDER = 'static/uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def get_customer_dashboard_data(user_id):
     """
-    Retrieves data for the customer's dashboard, including their TryOn history and remaining credits.
-
+    Retrieves data for the customer's dashboard.
+    
     Args:
         user_id (int): ID of the user.
-
+        
     Returns:
-        dict: A dictionary containing dashboard data.
-
+        dict: Dashboard data including user info and credits.
+        
     Raises:
-        ValueError: If the user or associated store is not found.
+        ValueError: If user not found.
     """
-    # Fetch user
     user = User.query.get(user_id)
     if not user:
         raise ValueError(f"User with ID {user_id} not found.")
-
-    # Fetch store
-    store = Store.query.get(user.store_id)
-    if not store:
-        raise ValueError(f"No store associated with user ID {user_id}.")
-
-    # Prepare data
-    data = {
+    
+    dashboard_data = {
         'user_email': user.email,
-        'store_name': store.name,
-        'remaining_credits': store.credit_balance or 0,  # Default to 0 if None
         'user_id': user_id,
-        'store_id': store.id
+        'store_name': None,
+        'store_id': None,
+        'remaining_credits': user.credit_balance or 0  # Default to user's credit balance
     }
 
-    return data
+    if user.store_id:
+        # User is associated with a store
+        store = Store.query.get(user.store_id)
+        if store:
+            dashboard_data['store_name'] = store.name
+            dashboard_data['store_id'] = store.id
+            dashboard_data['remaining_credits'] = store.credit_balance or 0  # Use store's credit balance
+
+    return dashboard_data
+
+
+def normalize_static_path(path):
+    """
+    Converts any path to a proper static URL path.
+    
+    Args:
+        path (str): File path to normalize
+        
+    Returns:
+        str: Normalized path relative to static folder with forward slashes
+    """
+    if os.path.isabs(path):
+        static_folder = current_app.static_folder
+        if path.startswith(static_folder):
+            rel_path = os.path.relpath(path, static_folder)
+        else:
+            rel_path = os.path.basename(path)
+    else:
+        rel_path = path
+    
+    # Replace backslashes with forward slashes for URLs
+    return rel_path.replace('\\', '/')
+
 
 async def process_customer_tryon(model_image, garment_image, category):
     """
-    Processes the TryOn request by saving the input images and invoking the TryOn utility.
+    Process a new TryOn request.
     
     Args:
-        model_image: FileStorage object containing the model image
-        garment_image: FileStorage object containing the garment image
-        category: String indicating the garment category
+        model_image: FileStorage object for model image
+        garment_image: FileStorage object for garment image
+        category: String indicating garment category
         
     Returns:
-        str: Path to the output image relative to static folder, or None if processing failed
+        str: Path to output image relative to static folder, or None if failed
     """
     try:
-        # Secure the filenames
+        current_app.logger.debug(f"Starting TryOn processing for category: {category}")
+        
         model_filename = secure_filename(f"model_{category}_{model_image.filename}")
         garment_filename = secure_filename(f"garment_{category}_{garment_image.filename}")
 
-        # Create full paths
-        model_image_path = os.path.join(UPLOAD_FOLDER, model_filename)
-        garment_image_path = os.path.join(UPLOAD_FOLDER, garment_filename)
+        # Use the UPLOAD_FOLDER path directly
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', 'static/uploads')
+        model_path = os.path.join(upload_folder, model_filename)
+        garment_path = os.path.join(upload_folder, garment_filename)
 
-        # Save the uploaded images
-        save_file(model_image, UPLOAD_FOLDER, model_filename)
-        save_file(garment_image, UPLOAD_FOLDER, garment_filename)
+        # Ensure upload directory exists
+        os.makedirs(upload_folder, exist_ok=True)
+        current_app.logger.debug(f"Saving files to: {upload_folder}")
 
-        # Call the TryOn processing utility (now async)
-        output_filename = await process_tryon(model_image_path, garment_image_path, category)
-        
-        # Clean up temporary files
+        # Save uploaded files
+        save_file(model_image, upload_folder, model_filename)
+        save_file(garment_image, upload_folder, garment_filename)
+
         try:
-            os.remove(model_image_path)
-            os.remove(garment_image_path)
-        except Exception as e:
-            print(f"Warning: Could not clean up temporary files: {str(e)}")
-            
-        return output_filename
-    except Exception as e:
-        print(f"Error during TryOn service: {str(e)}")
-        return None
+            # Create a dedicated folder for try-on results within static folder
+            tryon_results_folder = 'tryon-images'
+            full_tryon_results_path = os.path.join(current_app.static_folder, tryon_results_folder)
+            os.makedirs(full_tryon_results_path, exist_ok=True)
+            current_app.logger.debug(f"TryOn results folder: {full_tryon_results_path}")
 
+            # Process the try-on request with specified output folder
+            # Use asyncio.create_task instead of awaiting directly to prevent event loop issues
+            try:
+                result = await process_tryon(model_path, garment_path, category, output_folder=full_tryon_results_path)
+                current_app.logger.debug(f"Raw result from process_tryon: {result}")
+            except RuntimeError as e:
+                if "Event loop is closed" in str(e):
+                    current_app.logger.error("Event loop was closed. Creating new event loop.")
+                    # Get a new event loop
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    # Try again with the new loop
+                    result = await process_tryon(model_path, garment_path, category, output_folder=full_tryon_results_path)
+                    current_app.logger.debug(f"Result from new event loop: {result}")
+                else:
+                    # Re-raise other runtime errors
+                    raise
+            
+            if not result:
+                current_app.logger.error("TryOn processing returned None")
+                raise ValueError("TryOn processing failed")
+                
+            # Make sure result is a relative path to the static folder
+            result = normalize_static_path(result)
+            current_app.logger.debug(f"Normalized result path: {result}")
+                    
+            # Verify the file exists
+            result_full_path = os.path.join(current_app.static_folder, result)
+            current_app.logger.debug(f"Checking file existence at: {result_full_path}")
+            
+            if not os.path.exists(result_full_path):
+                current_app.logger.error(f"Result file does not exist: {result_full_path}")
+                return None
+                
+            if not os.access(result_full_path, os.R_OK):
+                current_app.logger.error(f"Result file is not readable: {result_full_path}")
+                return None
+
+            # Create TryOn record
+            tryon = TryOn(
+                user_id=current_user.id,
+                store_id=current_user.store_id,
+                category=category,
+                model_image=normalize_static_path(model_path),
+                garment_image=normalize_static_path(garment_path),
+                result_image=result,
+                credits_source='user' if current_user.credit_balance >= 1 else 'store'
+            )
+            db.session.add(tryon)
+            db.session.commit()
+            current_app.logger.debug(f"TryOn record created with ID: {tryon.id}")
+
+            return result
+
+        finally:
+            # Cleanup temporary files - Commented out to avoid issues with file access
+            # for path in [model_path, garment_path]:
+            #     try:
+            #         if os.path.exists(path):
+            #             os.remove(path)
+            #     except Exception as e:
+            #         current_app.logger.warning(f"Failed to cleanup {path}: {str(e)}")
+            pass
+
+    except Exception as e:
+        current_app.logger.error(f"TryOn processing error: {str(e)}")
+        import traceback
+        current_app.logger.error(traceback.format_exc())
+        return None
     
+
 def get_customer_tryons(store_id, page, per_page):
     """
-    Retrieves paginated TryOn history for a given store.
-
+    Get paginated TryOn history for a store.
+    
     Args:
-        store_id (int): ID of the store.
-        page (int): Current page number.
-        per_page (int): Number of items per page.
-
+        store_id (int): ID of the store
+        page (int): Current page number
+        per_page (int): Items per page
+        
     Returns:
-        dict: Contains 'items' (list of TryOn objects) and 'total_pages' (int).
+        dict: Contains 'items' (list of TryOns) and 'total_pages' (int)
     """
     try:
-        # Query TryOn objects associated with the store, ordered by creation date
         query = TryOn.query.filter_by(store_id=store_id).order_by(TryOn.created_at.desc())
         paginated = query.paginate(page=page, per_page=per_page, error_out=False)
-
+        
         return {
             'items': paginated.items,
             'total_pages': paginated.pages
         }
     except Exception as e:
+        current_app.logger.error(f"Error fetching TryOn history: {str(e)}")
         raise ValueError(f"Error fetching TryOn history: {str(e)}")

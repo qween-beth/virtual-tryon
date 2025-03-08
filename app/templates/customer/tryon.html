@@ -1,96 +1,441 @@
 {% extends "shared/base.html" %}
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-4xl mx-auto">
-        <h1 class="text-2xl font-bold mb-6">Customer Dashboard</h1>
+<div class="container" style="max-width: 1400px; margin: 0 auto;">
+    <!-- Back Button -->
+    <a href="/dashboard" style="display: flex; align-items: center; color: #6a0dad; margin-bottom: 1rem; text-decoration: none;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span style="margin-left: 0.5rem;">Back to Dashboard</span>
+    </a>
 
-        <!-- Credit Balance -->
-        <div class="bg-white shadow rounded-lg p-6 mb-6">
-            <h2 class="text-xl font-semibold mb-4">Your Credits</h2>
-            <div class="text-3xl font-bold text-blue-600">{{ current_user.store.credit_balance }}</div>
-            <p class="text-gray-600 mt-2">Available credits for virtual try-ons</p>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+        <!-- Left Side - Form Section -->
+        <div class="auth-form-container">
+            <div class="auth-header">
+                <h2>Virtual Try-On</h2>
+            </div>
+
+            <!-- Credit Balance Display -->
+            <div style="background: linear-gradient(135deg, rgba(106, 13, 173, 0.05), rgba(65, 105, 225, 0.05)); padding: 1rem; border-radius: 12px; text-align: center; margin-bottom: 2rem;">
+                <p style="color: #555; margin-bottom: 0.5rem;">Your Credit Balance:</p>
+                <span id="credit-balance" style="font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #6a0dad, #4169e1); -webkit-background-clip: text; background-clip: text; color: transparent;">
+                    {{ remaining_credits }}
+                </span>
+            </div>
+            
+            {% if store_name %}
+                <p style="color: #555; margin-bottom: 0.5rem;">Store: {{ store_name }}</p>
+            {% endif %}
+
+            <form id="tryonForm" class="auth-form" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <!-- Model Image Upload -->
+                <div class="form-group">
+                    <label>Model Image</label>
+                    <div style="border: 2px dashed rgba(106, 13, 173, 0.2); border-radius: 12px; padding: 2rem; text-align: center; position: relative;">
+                        <input type="file" 
+                               id="model_image" 
+                               name="model_image"
+                               accept="image/*" 
+                               required
+                               style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; cursor: pointer;">
+                        <p style="color: #555;">Upload model image</p>
+                        <img id="modelPreview" style="display: none; max-width: 100%; margin: 1rem auto 0; border-radius: 8px;">
+                    </div>
+                </div>
+
+                <!-- Garment Image Upload -->
+                <div class="form-group">
+                    <label>Garment Image</label>
+                    <div style="border: 2px dashed rgba(106, 13, 173, 0.2); border-radius: 12px; padding: 2rem; text-align: center; position: relative;">
+                        <input type="file" 
+                               id="garment_image" 
+                               name="garment_image"
+                               accept="image/*" 
+                               required
+                               style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; cursor: pointer;">
+                        <p style="color: #555;">Upload garment image</p>
+                        <img id="garmentPreview" style="display: none; max-width: 100%; margin: 1rem auto 0; border-radius: 8px;">
+                    </div>
+                </div>
+
+                <!-- Category Selection -->
+                <div class="form-group">
+                    <label>Garment Category</label>
+                    <select name="category" id="category" required style="width: 100%; padding: 0.75rem; border: 1px solid rgba(106, 13, 173, 0.2); border-radius: 8px;">
+                        <option value="top">Top</option>
+                        <option value="bottom">Bottom</option>
+                        <option value="dress">Dress</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="submit-button" style="width: 100%; margin-top: 1rem;">
+                    Generate Try-On
+                </button>
+
+                <!-- Error Message -->
+                <div id="error-message" class="error-message" style="display: none; margin-top: 1rem; background-color: #fee2e2; padding: 0.75rem; border-radius: 8px; color: #dc2626; align-items: center;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12" y2="16"></line>
+                    </svg>
+                    <p style="margin-left: 0.5rem; margin-bottom: 0;"></p>
+                </div>
+            </form>
         </div>
 
-        <!-- Quick Try-On Access -->
-        <div class="bg-white shadow rounded-lg p-6 mb-6">
-            <h2 class="text-xl font-semibold mb-4">Quick Actions</h2>
-            <a href="{{ url_for('customer.tryon') }}" 
-               class="inline-block bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors">
-                New Virtual Try-On
-            </a>
-        </div>
+        <!-- Right Side - Results Section -->
+        <div class="auth-form-container" id="resultsSection" style="display: {{ 'block' if output_image else 'none' }};">
+            <div class="auth-header">
+                <h2>Results</h2>
+            </div>
 
-        <!-- Try-On History -->
-        <div class="bg-white shadow rounded-lg p-6">
-            <h2 class="text-xl font-semibold mb-4">Your Try-On History</h2>
-            <div class="space-y-4">
-                {% if try_ons %}
-                    {% for try_on in try_ons %}
-                    <div class="border rounded-lg p-4">
-                        <div class="grid grid-cols-3 gap-4">
-                            <div>
-                                <img src="{{ try_on.model_image }}" alt="Model" class="w-full h-32 object-cover rounded">
-                                <p class="text-sm text-gray-600 mt-1">Model Image</p>
-                            </div>
-                            <div>
-                                <img src="{{ try_on.garment_image }}" alt="Garment" class="w-full h-32 object-cover rounded">
-                                <p class="text-sm text-gray-600 mt-1">Garment</p>
-                            </div>
-                            <div>
-                                <img src="{{ try_on.result_image }}" alt="Result" class="w-full h-32 object-cover rounded">
-                                <p class="text-sm text-gray-600 mt-1">Result</p>
-                            </div>
-                        </div>
-                        <div class="mt-2 flex justify-between items-center">
-                            <div class="text-sm text-gray-600">
-                                {{ try_on.created_at.strftime('%B %d, %Y') }}
-                            </div>
-                            <div class="text-sm text-gray-600">
-                                Category: {{ try_on.category }}
-                            </div>
-                            <a href="{{ url_for('download_result', try_on_id=try_on.id) }}" 
-                               class="text-blue-500 hover:text-blue-700">
-                                Download Result
-                            </a>
-                        </div>
+            <div id="results-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                {% if model_image_url %}
+                <div style="background: white; border-radius: 12px; overflow: hidden; 
+                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <div style="padding: 1rem;">
+                        <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: #1a1a1a;">
+                            Model Image
+                        </h3>
+                        <img src="{{ model_image_url }}" alt="Model" 
+                            style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
                     </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="text-center py-8 text-gray-500">
-                        <p>No try-ons yet. Start your first virtual try-on now!</p>
-                        <a href="{{ url_for('customer.tryon') }}" 
-                           class="inline-block mt-4 text-blue-500 hover:text-blue-700">
-                            Try Now
-                        </a>
+                </div>
+                {% endif %}
+
+                {% if garment_image_url %}
+                <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <div style="padding: 1rem;">
+                        <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: #1a1a1a;">Garment Image</h3>
+                        <img src="{{ garment_image_url }}" alt="Garment" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
                     </div>
+                </div>
+                {% endif %}
+
+                {% if output_image %}
+                <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <div style="padding: 1rem;">
+                        <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: #1a1a1a;">Try-On Result</h3>
+                        <img src="{{ output_image }}" alt="Result" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
+                    </div>
+                </div>
                 {% endif %}
             </div>
-
-            {% if try_ons %}
-            <!-- Pagination -->
-            <div class="mt-6 flex justify-center">
-                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                    {% if page > 1 %}
-                    <a href="?page={{ page - 1 }}" 
-                       class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                        Previous
-                    </a>
-                    {% endif %}
-                    
-                    <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
-                        Page {{ page }} of {{ total_pages }}
-                    </span>
-                    
-                    {% if page < total_pages %}
-                    <a href="?page={{ page + 1 }}" 
-                       class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                        Next
-                    </a>
-                    {% endif %}
-                </nav>
-            </div>
-            {% endif %}
         </div>
     </div>
 </div>
+
+<script>
+// Initialize debugging level
+const DEBUG = true;
+
+// Debug logging helper
+function debugLog(message, data) {
+    if (DEBUG) {
+        console.log(`[DEBUG] ${message}`, data || '');
+    }
+}
+
+// Utility function to safely display images
+function safelyLoadImage(imgElement, src, fallbackText) {
+    if (!src) {
+        console.error("No image source provided");
+        imgElement.style.display = 'none';
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'text-red-500 text-sm';
+        errorDiv.textContent = fallbackText || "Image could not be loaded";
+        imgElement.parentNode.appendChild(errorDiv);
+        return;
+    }
+
+    // Create a new image to test loading
+    const testImg = new Image();
+    testImg.onload = function() {
+        // Success - set the source on the real image
+        imgElement.src = src;
+        imgElement.style.display = 'block';
+    };
+    
+    testImg.onerror = function() {
+        console.error(`Failed to load image from: ${src}`);
+        imgElement.style.display = 'none';
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'text-red-500 text-sm';
+        errorDiv.textContent = fallbackText || "Image could not be loaded";
+        imgElement.parentNode.appendChild(errorDiv);
+    };
+    
+    // Start loading the test image
+    testImg.src = src;
+}
+
+// Image preview functionality
+function previewImage(inputId, previewId) {
+    const file = document.getElementById(inputId).files[0];
+    const preview = document.getElementById(previewId);
+    
+    if (file) {
+        debugLog(`Processing file preview for ${inputId}`, file.name);
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            debugLog(`Preview loaded for ${inputId}`);
+        };
+        reader.readAsDataURL(file);
+    } else {
+        debugLog(`No file selected for ${inputId}`);
+    }
+}
+
+// Function to create and show result cards
+function createResultCard(title, imageSource, container, isResultImage = false) {
+    debugLog(`Creating result card: ${title}`, imageSource);
+    
+    const cardDiv = document.createElement('div');
+    cardDiv.className = 'bg-white rounded-xl shadow-md overflow-hidden mb-4';
+    
+    const innerDiv = document.createElement('div');
+    innerDiv.className = 'p-4';
+    
+    const heading = document.createElement('h3');
+    heading.className = 'text-lg font-semibold mb-3 text-gray-800';
+    heading.textContent = title;
+    
+    const imgContainer = document.createElement('div');
+    imgContainer.className = 'relative';
+    
+    const img = document.createElement('img');
+    img.className = 'w-full h-48 object-cover rounded-lg';
+    img.alt = title;
+    img.style.display = 'none'; // Hide initially until loaded
+    
+    // Loading indicator
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'flex justify-center items-center h-48 bg-gray-100 rounded-lg';
+    loadingDiv.innerHTML = '<p class="text-gray-500">Loading image...</p>';
+    
+    imgContainer.appendChild(loadingDiv);
+    imgContainer.appendChild(img);
+    
+    innerDiv.appendChild(heading);
+    innerDiv.appendChild(imgContainer);
+    cardDiv.appendChild(innerDiv);
+    
+    container.appendChild(cardDiv);
+    
+    if (isResultImage) {
+        // For result images, add a retry button and more debug info
+        const loadingErrorDiv = document.createElement('div');
+        loadingErrorDiv.className = 'mt-2 hidden';
+        loadingErrorDiv.id = 'result-loading-error';
+        
+        const retryButton = document.createElement('button');
+        retryButton.className = 'mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 hidden';
+        retryButton.textContent = 'Retry Loading';
+        retryButton.id = 'retry-load-button';
+        retryButton.onclick = function() {
+            loadingDiv.innerHTML = '<p class="text-gray-500">Retrying...</p>';
+            safelyLoadImage(img, imageSource, "Failed to load result image. The server may still be processing.");
+        };
+        
+        innerDiv.appendChild(loadingErrorDiv);
+        innerDiv.appendChild(retryButton);
+    }
+    
+    // Load the image
+    img.onload = function() {
+        loadingDiv.remove();
+        img.style.display = 'block';
+        debugLog(`Image loaded successfully: ${title}`);
+    };
+    
+    img.onerror = function() {
+        debugLog(`Error loading image: ${title}`, imageSource);
+        loadingDiv.innerHTML = '<p class="text-red-500">Error loading image</p>';
+        
+        if (isResultImage) {
+            document.getElementById('result-loading-error').textContent = 
+                "Failed to load result image. The server may still be processing.";
+            document.getElementById('result-loading-error').className = 'mt-2 text-red-500 text-sm';
+            document.getElementById('retry-load-button').className = 
+                'mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600';
+        }
+    };
+    
+    img.src = imageSource;
+    
+    return { cardDiv, img };
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    debugLog('DOM content loaded, initializing TryOn form');
+    
+    // Set up file inputs to show previews
+    const modelInput = document.getElementById('model_image');
+    const garmentInput = document.getElementById('garment_image');
+    
+    if (modelInput) {
+        modelInput.addEventListener('change', function() {
+            previewImage('model_image', 'modelPreview');
+        });
+    }
+    
+    if (garmentInput) {
+        garmentInput.addEventListener('change', function() {
+            previewImage('garment_image', 'garmentPreview');
+        });
+    }
+    
+    // Form submission handler
+    const tryonForm = document.getElementById('tryonForm');
+    if (!tryonForm) {
+        console.error('Form with ID "tryonForm" not found');
+        return;
+    }
+
+    tryonForm.addEventListener('submit', function(event) {
+        // Prevent traditional form submission
+        event.preventDefault();
+        debugLog('Form submission started');
+        
+        // Get form elements
+        const modelInput = document.getElementById('model_image');
+        const garmentInput = document.getElementById('garment_image');
+        const categorySelect = document.getElementById('category');
+        const errorDiv = document.getElementById('error-message');
+        const errorText = errorDiv.querySelector('p');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsContainer = document.getElementById('results-container');
+        
+        // Basic validation
+        if (!modelInput.files.length || !garmentInput.files.length) {
+            errorText.textContent = "Please upload both model and garment images before proceeding.";
+            errorDiv.style.display = 'flex';
+            return;
+        }
+        
+        // Hide any previous error
+        errorDiv.style.display = 'none';
+        
+        // Check credit balance
+        let creditBalance = document.getElementById('credit-balance');
+        let currentCredits = parseInt(creditBalance.textContent);
+        if (isNaN(currentCredits) || currentCredits <= 0) {
+            errorText.textContent = "You don't have enough credits.";
+            errorDiv.style.display = 'flex';
+            return;
+        }
+        
+        // Show loading state
+        const submitButton = this.querySelector('button[type="submit"]');
+        const originalButtonText = submitButton.textContent;
+        submitButton.textContent = 'Processing...';
+        submitButton.disabled = true;
+        
+        // Clear previous results
+        resultsSection.style.display = 'none';
+        resultsContainer.innerHTML = '';
+        
+        // Create FormData object to submit files
+        const formData = new FormData();
+        formData.append('model_image', modelInput.files[0]);
+        formData.append('garment_image', garmentInput.files[0]);
+        formData.append('category', categorySelect.value);
+        
+        // Add CSRF token if available
+        const csrfToken = document.querySelector('input[name="csrf_token"]');
+        if (csrfToken) {
+            formData.append('csrf_token', csrfToken.value);
+        }
+        
+        debugLog('Sending AJAX request', {
+            category: categorySelect.value,
+            modelFile: modelInput.files[0].name,
+            garmentFile: garmentInput.files[0].name
+        });
+            
+            // Send AJAX request to backend
+            fetch('/customer/tryon', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    ...(csrfToken && {'X-CSRFToken': csrfToken.value})
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        try {
+                            // Try to parse as JSON first
+                            return Promise.reject(JSON.parse(text));
+                        } catch (e) {
+                            // If not JSON, return text as error
+                            return Promise.reject({ error: "Server error: " + text.substring(0, 100) + "..." });
+                        }
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    // Show error message
+                    errorText.textContent = data.error;
+                    errorDiv.style.display = 'flex';
+                } else if (data.success) {
+                    // Update credit balance from server response
+                    creditBalance.textContent = data.remaining_credits;
+                    
+                    // Show results section and clear previous results
+                    resultsSection.style.display = 'block';
+                    resultsContainer.innerHTML = '';
+                    
+                    // Add model preview
+                    resultsContainer.innerHTML += `
+                        <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                            <div style="padding: 1rem;">
+                                <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: #1a1a1a;">Model Image</h3>
+                                <img src="${URL.createObjectURL(modelInput.files[0])}" alt="Model" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Add garment preview
+                    resultsContainer.innerHTML += `
+                        <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                            <div style="padding: 1rem;">
+                                <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: #1a1a1a;">Garment Image</h3>
+                                <img src="${URL.createObjectURL(garmentInput.files[0])}" alt="Garment" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Add result image - using data.output_image consistently
+                    resultsContainer.innerHTML += `
+                        <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                            <div style="padding: 1rem;">
+                                <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: #1a1a1a;">Try-On Result</h3>
+                                <img src="${data.output_image}" alt="Result" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
+                            </div>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                errorText.textContent = error.error || "An unexpected error occurred. Please try again.";
+                errorDiv.style.display = 'flex';
+            })
+            .finally(() => {
+                // Reset button state
+                submitButton.textContent = originalButtonText;
+                submitButton.disabled = false;
+            });
+        });
+    });
+</script>
 {% endblock %}

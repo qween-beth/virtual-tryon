@@ -1,95 +1,139 @@
 {% extends "shared/base.html" %}
 
-{% block title %}Register - Virtual Try-On{% endblock %}
-
 {% block content %}
-<div class="min-h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
-        </h2>
-        <p class="mt-2 text-center text-sm text-gray-600">
-            Or
-            <a href="{{ url_for('auth.login') }}" class="font-medium text-blue-600 hover:text-blue-500">
-                sign in to your existing account
-            </a>
-        </p>
-    </div>
+<div class="auth-container">
+    <div class="auth-box">
+        <!-- Logo/Brand Section -->
+        <div class="auth-header">
+            <h2>Create Account</h2>
+            <p>Join Virtual Try-On today</p>
+        </div>
 
-    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-            <form class="space-y-6" action="{{ url_for('auth.register') }}" method="POST">
-                <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700">
-                        Email address
-                    </label>
-                    <div class="mt-1">
-                        <input id="email" name="email" type="email" required
-                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    </div>
+        <!-- Register Form -->
+        <div class="auth-form-container">
+            <form class="auth-form" action="{{ url_for('auth.register') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+                <div class="form-group">
+                    <label for="email">Email address</label>
+                    <input type="email" name="email" id="email" required placeholder="you@example.com">
                 </div>
-                <div>
-                    <label for="role">Register as:</label>
+
+                <div class="form-group">
+                    <label for="role">Register as</label>
                     <select name="role" id="role" required>
                         <option value="customer">Customer</option>
+                        <option value="store_customer">Store Customer</option>
                         <option value="store">Store</option>
                     </select>
                 </div>
-                <div id="store-name-field" style="display: none;">
-                    <label for="store_name">Store Name:</label>
-                    <input type="text" name="store_name" id="store_name">
+
+                <div class="form-group" id="store-selection-field" style="display: none;">
+                    <label for="store_id">Select Store</label>
+                    <select id="store_id" name="store_id">
+                        <option value="">-- Select a Store --</option>
+                        {% for store in stores %}
+                            <option value="{{ store.id }}">{{ store.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
 
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700">
-                        Password
-                    </label>
-                    <div class="mt-1">
-                        <input id="password" name="password" type="password" required
-                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    </div>
+                <div class="form-group" id="store-name-field" style="display: none;">
+                    <label for="store_name">Store Name</label>
+                    <input type="text" name="store_name" id="store_name" placeholder="Your Store Name">
                 </div>
 
-                <div>
-                    <label for="confirm_password" class="block text-sm font-medium text-gray-700">
-                        Confirm Password
-                    </label>
-                    <div class="mt-1">
-                        <input id="confirm_password" name="confirm_password" type="password" required
-                            class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" name="password" id="password" required placeholder="••••••••">
                 </div>
 
-                <div>
-                    <button type="submit"
-                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        Register
-                    </button>
+                <div class="form-group">
+                    <label for="confirm_password">Confirm Password</label>
+                    <input type="password" name="confirm_password" id="confirm_password" required placeholder="••••••••">
                 </div>
+
+                <button type="submit" class="submit-button">Create Account</button>
             </form>
 
-            <div class="mt-6">
-                <div class="relative">
-                    <div class="absolute inset-0 flex items-center">
-                        <div class="w-full border-t border-gray-300"></div>
-                    </div>
-                    <div class="relative flex justify-center text-sm">
-                        <span class="px-2 bg-white text-gray-500">
-                            Protected by reCAPTCHA and subject to our Privacy Policy and Terms of Service
-                        </span>
-                    </div>
-                </div>
+            <div class="auth-divider">
+                <span>Already have an account?</span>
+            </div>
+
+            <a href="{{ url_for('auth.login') }}" class="secondary-button">Sign in instead</a>
+
+            <div class="terms-text">
+                Protected by reCAPTCHA and subject to our 
+                <a href="#">Privacy Policy</a> and 
+                <a href="#">Terms of Service</a>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Show/Hide store name field based on selected role
-    const roleField = document.getElementById('role');
-    const storeNameField = document.getElementById('store-name-field');
-    roleField.addEventListener('change', () => {
-        storeNameField.style.display = roleField.value === 'store' ? 'block' : 'none';
+    document.addEventListener("DOMContentLoaded", function () {
+        const roleField = document.getElementById('role');
+        const storeSelectionField = document.getElementById('store-selection-field');
+        const storeDropdown = document.getElementById('store_id');
+        const storeNameField = document.getElementById('store-name-field');
+        const storeNameInput = document.getElementById('store_name');
+        const form = document.querySelector('form');
+        const password = document.getElementById('password');
+        const confirmPassword = document.getElementById('confirm_password');
+        const email = document.getElementById('email');
+
+        // Show/Hide store fields based on selected role
+        function updateFields() {
+            const role = roleField.value;
+
+            if (role === 'store_customer') {
+                storeSelectionField.style.display = 'block';
+                storeDropdown.setAttribute('required', 'true');
+                storeNameField.style.display = 'none';
+                storeNameInput.removeAttribute('required');
+            } else if (role === 'store') {
+                storeSelectionField.style.display = 'none';
+                storeDropdown.removeAttribute('required');
+                storeNameField.style.display = 'block';
+                storeNameInput.setAttribute('required', 'true');
+            } else { // Customer
+                storeSelectionField.style.display = 'none';
+                storeDropdown.removeAttribute('required');
+                storeNameField.style.display = 'none';
+                storeNameInput.removeAttribute('required');
+            }
+        }
+
+        roleField.addEventListener('change', updateFields);
+        updateFields(); // Initialize on page load
+
+        // Form validation
+        form.addEventListener('submit', function (event) {
+            let errors = [];
+
+            if (password.value !== confirmPassword.value) {
+                errors.push("Passwords do not match.");
+            }
+
+            if (roleField.value === 'store_customer' && storeDropdown.value.trim() === '') {
+                errors.push("Please select a store for Store Customer accounts.");
+            }
+
+            if (roleField.value === 'store' && storeNameInput.value.trim() === '') {
+                errors.push("Store name is required for Store accounts.");
+            }
+
+            const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!emailPattern.test(email.value)) {
+                errors.push("Please enter a valid email address.");
+            }
+
+            if (errors.length > 0) {
+                event.preventDefault();
+                alert(errors.join("\n"));
+            }
+        });
     });
 </script>
 {% endblock %}

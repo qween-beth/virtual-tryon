@@ -3,6 +3,8 @@ from flask_login import login_user, logout_user, current_user  # Added logout_us
 from werkzeug.security import check_password_hash, generate_password_hash
 from app.core.models import User, Store
 from app.core.database import db
+from flask_wtf.csrf import generate_csrf
+
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -100,6 +102,7 @@ def register():
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
         role = request.form.get('role')  # Role selected during registration
+        store_id = request.form.get('store_id')  # Store selection for customers
 
         # Validation checks
         errors = []
@@ -143,12 +146,18 @@ def register():
                 flash(f'Store creation failed: {str(e)}')
                 return redirect(url_for('auth.register'))
 
-        # For customers, optionally associate a default store or leave store_id as None
-        if role == 'customer':
-            # Example: Associate a default store (optional)
-            default_store = Store.query.filter_by(name='Default Store').first()
-            if default_store:
-                new_user.store_id = default_store.id
+        # Assign selected store for customers
+        elif role == 'customer':
+            if store_id:  # If the customer selected a store, validate it
+                selected_store = Store.query.get(store_id)
+                if selected_store:
+                    new_user.store_id = selected_store.id
+                else:
+                    flash('Invalid store selection.')
+                    return redirect(url_for('auth.register'))
+            else:
+                flash('Please select a store to proceed.')
+                return redirect(url_for('auth.register'))
 
         # Save the new user and handle any errors
         try:
@@ -162,6 +171,9 @@ def register():
             flash(f'Registration failed: {str(e)}')
             return redirect(url_for('auth.register'))
 
-    return render_template('auth/register.html')
+    # Fetch stores to show in dropdown
+    stores = Store.query.all()
+    return render_template('auth/register.html', stores=stores, csrf_token=generate_csrf())
+
 
 

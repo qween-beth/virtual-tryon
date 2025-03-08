@@ -1,66 +1,697 @@
-{% extends "shared/base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Virtual Try-On - Revolutionary Fashion Experience</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #6a0dad;
+      --secondary-color: #4169e1;
+      --text-dark: #1a1a2e;
+      --text-light: #4b4b6a;
+      --background-light: #f9fafb;
+      --gradient: linear-gradient(135deg, #6a0dad, #4169e1);
+    }
 
-{% block title %}Welcome to Virtual Try-On{% endblock %}
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-{% block content %}
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      background-color: var(--background-light);
+      color: var(--text-dark);
+      line-height: 1.6;
+      scroll-behavior: smooth;
+    }
 
-<body class="bg-gradient-to-br from-gray-50 to-white min-h-screen">
-    <div class="container mx-auto px-4 py-16 max-w-6xl">
-        <div class="text-center space-y-8">
-            <div class="mb-12">
-                <h1 class="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600 mb-6">
-                    Virtual Try-On
-                </h1>
-                <p class="text-2xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-                    Transform fashion shopping with AI-powered virtual fitting rooms. Experience seamless, personalized style exploration.
-                </p>
+    /* Navigation */
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(15px);
+      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+      z-index: 1000;
+    }
+
+    .nav-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem 2rem;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 800;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .nav-link {
+      color: var(--text-light);
+      text-decoration: none;
+      font-weight: 500;
+      position: relative;
+      transition: color 0.3s ease;
+    }
+
+    .nav-link:hover {
+      color: var(--primary-color);
+    }
+
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: var(--gradient);
+      transition: width 0.3s ease;
+    }
+
+    .nav-link:hover::after {
+      width: 100%;
+    }
+
+    /* Hero Section */
+    .hero-section {
+      display: flex;
+      align-items: center;
+      min-height: 100vh;
+      padding-top: 80px;
+      background: linear-gradient(135deg, rgba(106, 13, 173, 0.05), rgba(65, 105, 225, 0.05));
+    }
+
+    .hero-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      gap: 4rem;
+      padding: 0 2rem;
+    }
+
+    .hero-text {
+      max-width: 550px;
+    }
+
+    .hero-title {
+      font-size: 3.5rem;
+      font-weight: 800;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 1.5rem;
+      line-height: 1.2;
+    }
+
+    .hero-description {
+      color: var(--text-light);
+      font-size: 1.2rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .hero-image {
+      max-width: 100%;
+      border-radius: 20px;
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.1);
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+    }
+
+    .primary-cta {
+      display: inline-block;
+      padding: 1rem 2.5rem;
+      background: var(--gradient);
+      color: white;
+      text-decoration: none;
+      border-radius: 50px;
+      font-weight: 600;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .primary-cta:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(106, 13, 173, 0.3);
+    }
+
+    .secondary-cta {
+      color: var(--primary-color);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+    }
+
+    .secondary-cta:hover {
+      text-decoration: underline;
+    }
+
+    /* Features Section */
+    .features-section {
+      background: white;
+      padding: 6rem 0;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    .feature-card {
+      background: var(--background-light);
+      border-radius: 16px;
+      padding: 2.5rem;
+      text-align: center;
+      transition: transform 0.4s, box-shadow 0.4s;
+      border: 1px solid rgba(106, 13, 173, 0.1);
+    }
+
+    .feature-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    }
+
+    .feature-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.5rem;
+      background: linear-gradient(135deg, rgba(106, 13, 173, 0.1), rgba(65, 105, 225, 0.1));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      color: var(--primary-color);
+    }
+
+    .feature-title {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: var(--text-dark);
+    }
+
+    .feature-description {
+      color: var(--text-light);
+      line-height: 1.6;
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 1024px) {
+      .hero-content {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+
+      .hero-image {
+        margin-top: 2rem;
+        max-width: 80%;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .cta-buttons {
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .hero-title {
+        font-size: 2.8rem;
+      }
+
+      .hero-description {
+        font-size: 1rem;
+      }
+    }
+    /* User Menu Styling */
+  .user-menu {
+    position: relative;
+    margin-left: 1rem;
+  }
+  
+  .user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--gradient);
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-weight: 600;
+    transition: transform 0.2s;
+  }
+  
+  .user-avatar:hover {
+    transform: scale(1.05);
+  }
+  
+  .user-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 0.5rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+    padding: 0.5rem 0;
+    min-width: 180px;
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s;
+  }
+  
+  .user-dropdown.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  
+  .user-dropdown a {
+    display: block;
+    padding: 0.75rem 1.25rem;
+    color: var(--text-dark);
+    text-decoration: none;
+    transition: background-color 0.2s;
+  }
+  
+  .user-dropdown a:hover {
+    background-color: rgba(106, 13, 173, 0.05);
+    color: var(--primary-color);
+  }
+  
+  /* Auth Buttons */
+  .auth-buttons {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  
+  .login-btn {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    transition: all 0.3s;
+  }
+  
+  .login-btn:hover {
+    background-color: rgba(106, 13, 173, 0.05);
+  }
+  
+  .signup-btn {
+    background: var(--gradient);
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 1.5rem;
+    border-radius: 50px;
+    transition: all 0.3s;
+  }
+  
+  .signup-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(106, 13, 173, 0.2);
+  }
+  
+  /* Hamburger Menu */
+  .hamburger {
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 30px;
+    height: 21px;
+    cursor: pointer;
+    z-index: 200;
+  }
+  
+  .hamburger span {
+    display: block;
+    height: 3px;
+    width: 100%;
+    background: var(--primary-color);
+    border-radius: 3px;
+    transition: all 0.3s;
+  }
+  
+  /* Mobile Responsive */
+  @media (max-width: 768px) {
+    .hamburger {
+      display: flex;
+    }
+    
+    .nav-links {
+      position: fixed;
+      top: 0;
+      right: -100%;
+      height: 100vh;
+      width: 70%;
+      background: white;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 5rem 2rem 2rem;
+      transition: right 0.3s ease;
+      box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+      z-index: 100;
+    }
+    
+    .nav-links.active {
+      right: 0;
+    }
+    
+    .nav-links .nav-link {
+      margin: 1rem 0;
+    }
+    
+    .auth-buttons {
+      flex-direction: column;
+      width: 100%;
+      margin-top: 1rem;
+    }
+    
+    .auth-buttons a {
+      width: 100%;
+      text-align: center;
+      margin: 0.5rem 0;
+    }
+    
+    .user-menu {
+      margin-top: 1rem;
+      width: 100%;
+    }
+    
+    .user-dropdown {
+      width: 100%;
+      position: relative;
+      box-shadow: none;
+      border: 1px solid rgba(106, 13, 173, 0.1);
+      margin-top: 0.5rem;
+    }
+  }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="nav-container">
+      <a href="#" class="logo">Virtual Try-On</a>
+      <nav class="nav-links">
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#how-it-works" class="nav-link">How It Works</a>
+        <a href="#pricing" class="nav-link">Pricing</a>
+        <div class="nav-links" id="nav-links">
+          {% if current_user.is_authenticated %}
+            {% if current_user.role == 'admin' %}
+              <a href="{{ url_for('admin.dashboard') }}" class="nav-link">Dashboard</a>
+              <a href="{{ url_for('admin.subscriptions') }}" class="nav-link">Subscriptions</a>
+              <a href="{{ url_for('admin.api_keys') }}" class="nav-link">API Keys</a>
+            {% endif %}
+  
+            {% if current_user.role == 'store' %}
+              <a href="{{ url_for('store.dashboard') }}" class="nav-link">Dashboard</a>
+              <a href="{{ url_for('store.customers') }}" class="nav-link">Customers</a>
+              <a href="{{ url_for('store.api_dashboard') }}" class="nav-link">API</a>
+            {% endif %}
+  
+            {% if current_user.role == 'customer' %}
+              <a href="{{ url_for('customer.dashboard') }}" class="nav-link">Dashboard</a>
+              <a href="{{ url_for('customer.tryon') }}" class="nav-link">Try-On</a>
+            {% endif %}
+  
+            <!-- User Menu -->
+            <div class="user-menu">
+              <button class="user-avatar" id="user-menu-button">
+                <span>{{ current_user.email[0].upper() }}</span>
+              </button>
+              <div class="user-dropdown" id="user-dropdown">
+                <a href="#">Profile</a>
+                <a href="#">Settings</a>
+                <a href="{{ url_for('auth.logout') }}">Sign Out</a>
+              </div>
             </div>
-
-            <div class="grid md:grid-cols-3 gap-8">
-                <div class="bg-white rounded-2xl shadow-xl p-8 transform transition hover:scale-105 hover:shadow-2xl">
-                    <div class="mb-6">
-                        <svg class="mx-auto h-16 w-16 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">For Customers</h3>
-                    <p class="text-gray-600">
-                        Try on clothes virtually, explore styles, and shop with confidence from anywhere.
-                    </p>
-                </div>
-
-                <div class="bg-white rounded-2xl shadow-xl p-8 transform transition hover:scale-105 hover:shadow-2xl">
-                    <div class="mb-6">
-                        <svg class="mx-auto h-16 w-16 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">For Retailers</h3>
-                    <p class="text-gray-600">
-                        Boost online sales, reduce returns, and provide immersive shopping experiences.
-                    </p>
-                </div>
-
-                <div class="bg-white rounded-2xl shadow-xl p-8 transform transition hover:scale-105 hover:shadow-2xl">
-                    <div class="mb-6">
-                        <svg class="mx-auto h-16 w-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">AI Technology</h3>
-                    <p class="text-gray-600">
-                        Advanced AI mapping ensures accurate, realistic virtual clothing trials.
-                    </p>
-                </div>
+          {% else %}
+            <div class="auth-buttons">
+              <a href="{{ url_for('auth.login') }}" class="login-btn">Log In</a>
+              <a href="{{ url_for('auth.register') }}" class="signup-btn">Sign Up</a>
             </div>
-
-            <div class="mt-12">
-                <a href="#" class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-10 py-4 rounded-full text-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition">
-                    Get Started
-                </a>
-            </div>
+          {% endif %}
         </div>
+  
+        <!-- Mobile menu button -->
+        <div class="hamburger" id="hamburger">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </nav>
     </div>
-</body>
+  </header>
 
-{% endblock %}
+  <main>
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="hero-title">Experience Fashion Like Never Before</h1>
+          <p class="hero-description">
+            Our AI-powered virtual try-on technology lets you see how clothes look on you instantly, 
+            without leaving your home. Make confident fashion choices with just a click.
+          </p>
+          <div class="cta-buttons">
+            <a href="#get-started" class="primary-cta">Get Started</a>
+            <a href="#demo" class="secondary-cta">
+              <i class="fas fa-play-circle"></i> Watch Demo
+            </a>
+          </div>
+        </div>
+        <div>
+          <img src="/api/placeholder/600/400" alt="Virtual Try-On Demonstration" class="hero-image">
+        </div>
+      </div>
+    </section>
+
+    <section class="features-section" id="features">
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-magic"></i>
+          </div>
+          <h3 class="feature-title">AI-Powered Accuracy</h3>
+          <p class="feature-description">
+            Our advanced AI algorithms provide ultra-realistic clothing simulations 
+            that accurately represent how garments will look on your body.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-mobile-alt"></i>
+          </div>
+          <h3 class="feature-title">Multi-Device Support</h3>
+          <p class="feature-description">
+            Try on clothes seamlessly across smartphones, tablets, and desktops 
+            with our responsive and user-friendly interface.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fas fa-shopping-cart"></i>
+          </div>
+          <h3 class="feature-title">Direct Shopping</h3>
+          <p class="feature-description">
+            Instantly purchase items you love directly from the virtual try-on 
+            experience with our integrated shopping platform.
+          </p>
+        </div>
+      </div>
+    </section>
+    <!-- How It Works Section -->
+<section class="how-it-works-section" id="how-it-works">
+  <div class="section-container" style="max-width: 1200px; margin: 0 auto; padding: 6rem 2rem; text-align: center;">
+    <h2 style="font-size: 2.5rem; margin-bottom: 1.5rem; color: var(--text-dark);">How It Works</h2>
+    <p style="color: var(--text-light); max-width: 700px; margin: 0 auto 3rem;">Our virtual try-on technology is easy to use and gives you realistic results in seconds</p>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 3rem; margin-top: 2rem;">
+      <div class="step-card" style="display: flex; flex-direction: column; align-items: center;">
+        <div style="background: var(--gradient); color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-bottom: 1.5rem;">1</div>
+        <h3 style="font-size: 1.3rem; margin-bottom: 1rem;">Upload Your Photo</h3>
+        <p style="color: var(--text-light);">Take a simple photo or selfie, or upload an existing one to get started.</p>
+      </div>
+      
+      <div class="step-card" style="display: flex; flex-direction: column; align-items: center;">
+        <div style="background: var(--gradient); color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-bottom: 1.5rem;">2</div>
+        <h3 style="font-size: 1.3rem; margin-bottom: 1rem;">Browse Collection</h3>
+        <p style="color: var(--text-light);">Explore thousands of items from top brands and independent designers.</p>
+      </div>
+      
+      <div class="step-card" style="display: flex; flex-direction: column; align-items: center;">
+        <div style="background: var(--gradient); color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-bottom: 1.5rem;">3</div>
+        <h3 style="font-size: 1.3rem; margin-bottom: 1rem;">Virtual Try-On</h3>
+        <p style="color: var(--text-light);">Our AI instantly shows how each item fits your body shape and style.</p>
+      </div>
+      
+      <div class="step-card" style="display: flex; flex-direction: column; align-items: center;">
+        <div style="background: var(--gradient); color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-bottom: 1.5rem;">4</div>
+        <h3 style="font-size: 1.3rem; margin-bottom: 1rem;">Shop Confidently</h3>
+        <p style="color: var(--text-light);">Purchase your favorite pieces directly through our secure platform.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing Section -->
+<section class="pricing-section" id="pricing" style="background: linear-gradient(135deg, rgba(106, 13, 173, 0.05), rgba(65, 105, 225, 0.05)); padding: 6rem 0;">
+  <div class="section-container" style="max-width: 1200px; margin: 0 auto; padding: 0 2rem; text-align: center;">
+    <h2 style="font-size: 2.5rem; margin-bottom: 1.5rem; color: var(--text-dark);">Pricing Plans</h2>
+    <p style="color: var(--text-light); max-width: 700px; margin: 0 auto 3rem;">Choose the perfect plan that fits your shopping needs</p>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+      <!-- Free Plan -->
+      <div class="pricing-card" style="background: white; border-radius: 16px; padding: 3rem 2rem; transition: transform 0.3s; border: 1px solid rgba(106, 13, 173, 0.1);">
+        <h3 style="font-size: 1.8rem; margin-bottom: 1rem; color: var(--text-dark);">Free</h3>
+        <div style="font-size: 3rem; font-weight: 700; margin: 1.5rem 0;">$0</div>
+        <p style="color: var(--text-light); margin-bottom: 2rem;">Perfect for casual shoppers</p>
+        <ul style="text-align: left; list-style: none; margin-bottom: 2rem;">
+          <li style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-check" style="color: var(--primary-color);"></i>
+            <span>5 virtual try-ons per month</span>
+          </li>
+          <li style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-check" style="color: var(--primary-color);"></i>
+            <span>Basic clothing catalog</span>
+          </li>
+          <li style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-check" style="color: var(--primary-color);"></i>
+            <span>Save 2 outfit combinations</span>
+          </li>
+        </ul>
+        <a href="#signup" style="display: inline-block; padding: 0.8rem 2rem; background: white; color: var(--primary-color); border: 2px solid var(--primary-color); border-radius: 50px; text-decoration: none; font-weight: 600; transition: all 0.3s;">Sign Up Free</a>
+      </div>
+      
+      <!-- Premium Plan -->
+      <div class="pricing-card" style="background: white; border-radius: 16px; padding: 3rem 2rem; transform: scale(1.05); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); position: relative; border: 2px solid var(--primary-color); z-index: 1;">
+        <div style="position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: var(--gradient); color: white; font-weight: 600; padding: 0.5rem 1.5rem; border-radius: 20px; font-size: 0.9rem;">Most Popular</div>
+        <h3 style="font-size: 1.8rem; margin-bottom: 1rem; color: var(--text-dark);">Premium</h3>
+        <div style="font-size: 3rem; font-weight: 700; margin: 1.5rem 0;">$9.99<span style="font-size: 1rem; font-weight: normal; color: var(--text-light);">/month</span></div>
+        <p style="color: var(--text-light); margin-bottom: 2rem;">Ideal for fashion enthusiasts</p>
+        <ul style="text-align: left; list-style: none; margin-bottom: 2rem;">
+          <li style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-check" style="color: var(--primary-color);"></i>
+            <span>Unlimited virtual try-ons</span>
+          </li>
+          <li style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-check" style="color: var(--primary-color);"></i>
+            <span>Full designer catalog access</span>
+          </li>
+          <li style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-check" style="color: var(--primary-color);"></i>
+            <span>Save unlimited outfit combinations</span>
+          </li>
+          <li style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-check" style="color: var(--primary-color);"></i>
+            <span>Exclusive discounts with partner brands</span>
+          </li>
+        </ul>
+        <a href="#premium-signup" style="display: inline-block; padding: 0.8rem 2rem; background: var(--gradient); color: white; border-radius: 50px; text-decoration: none; font-weight: 600; transition: all 0.3s;">Get Premium</a>
+      </div>
+      
+      <!-- Enterprise Plan -->
+      <div class="pricing-card" style="background: white; border-radius: 16px; padding: 3rem 2rem; transition: transform 0.3s; border: 1px solid rgba(106, 13, 173, 0.1);">
+        <h3 style="font-size: 1.8rem; margin-bottom: 1rem; color: var(--text-dark);">Enterprise</h3>
+        <div style="font-size: 3rem; font-weight: 700; margin: 1.5rem 0;">$24.99<span style="font-size: 1rem; font-weight: normal; color: var(--text-light);">/month</span></div>
+        <p style="color: var(--text-light); margin-bottom: 2rem;">For professional stylists & businesses</p>
+        <ul style="text-align: left; list-style: none; margin-bottom: 2rem;">
+          <li style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-check" style="color: var(--primary-color);"></i>
+            <span>All Premium features</span>
+          </li>
+          <li style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-check" style="color: var(--primary-color);"></i>
+            <span>Client management tools</span>
+          </li>
+          <li style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-check" style="color: var(--primary-color);"></i>
+            <span>API access for custom integration</span>
+          </li>
+          <li style="margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-check" style="color: var(--primary-color);"></i>
+            <span>Dedicated account manager</span>
+          </li>
+        </ul>
+        <a href="#enterprise-contact" style="display: inline-block; padding: 0.8rem 2rem; background: white; color: var(--primary-color); border: 2px solid var(--primary-color); border-radius: 50px; text-decoration: none; font-weight: 600; transition: all 0.3s;">Contact Sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+  </main>
+</body>
+</html>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    const userMenuButton = document.getElementById('user-menu-button');
+    const userDropdown = document.getElementById('user-dropdown');
+    
+    // Toggle mobile menu
+    if (hamburger) {
+      hamburger.addEventListener('click', function() {
+        navLinks.classList.toggle('active');
+      });
+    }
+    
+    // Toggle user dropdown
+    if (userMenuButton && userDropdown) {
+      userMenuButton.addEventListener('click', function(e) {
+        e.stopPropagation();
+        userDropdown.classList.toggle('active');
+      });
+      
+      // Close dropdown when clicking outside
+      document.addEventListener('click', function() {
+        userDropdown.classList.remove('active');
+      });
+      
+      // Prevent dropdown from closing when clicking inside it
+      userDropdown.addEventListener('click', function(e) {
+        e.stopPropagation();
+      });
+    }
+  });
+</script>
