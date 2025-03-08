@@ -664,34 +664,50 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    const hamburger = document.getElementById('hamburger');
-    const navLinks = document.getElementById('nav-links');
-    const userMenuButton = document.getElementById('user-menu-button');
-    const userDropdown = document.getElementById('user-dropdown');
+  const hamburger = document.getElementById('hamburger');
+  const navLinks = document.getElementById('nav-links');
+  const userMenuButton = document.getElementById('user-menu-button');
+  const userDropdown = document.getElementById('user-dropdown');
+  
+  // Toggle mobile menu
+  if (hamburger) {
+    hamburger.addEventListener('click', function() {
+      navLinks.classList.toggle('active');
+      // Optional: Toggle hamburger animation
+      hamburger.classList.toggle('active');
+    });
+  }
+  
+  // Toggle user dropdown
+  if (userMenuButton && userDropdown) {
+    userMenuButton.addEventListener('click', function(e) {
+      e.stopPropagation();
+      userDropdown.classList.toggle('active');
+    });
     
-    // Toggle mobile menu
-    if (hamburger) {
-      hamburger.addEventListener('click', function() {
-        navLinks.classList.toggle('active');
-      });
-    }
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function() {
+      userDropdown.classList.remove('active');
+    });
     
-    // Toggle user dropdown
-    if (userMenuButton && userDropdown) {
-      userMenuButton.addEventListener('click', function(e) {
-        e.stopPropagation();
-        userDropdown.classList.toggle('active');
-      });
-      
-      // Close dropdown when clicking outside
-      document.addEventListener('click', function() {
-        userDropdown.classList.remove('active');
-      });
-      
-      // Prevent dropdown from closing when clicking inside it
-      userDropdown.addEventListener('click', function(e) {
-        e.stopPropagation();
-      });
-    }
+    // Prevent dropdown from closing when clicking inside it
+    userDropdown.addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
+  }
+  
+  // Close mobile menu when clicking a link
+  const mobileLinks = navLinks.querySelectorAll('a');
+  mobileLinks.forEach(link => {
+    link.addEventListener('click', function() {
+      // Only close if viewport is mobile size
+      if (window.innerWidth <= 768) {
+        navLinks.classList.remove('active');
+        if (hamburger.classList.contains('active')) {
+          hamburger.classList.remove('active');
+        }
+      }
+    });
   });
+});
 </script>
