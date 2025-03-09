@@ -1,9 +1,15 @@
 #tryon.py
 from flask import Flask, render_template, request, url_for, send_from_directory, current_app
-import asyncio
 import fal_client
 from app.utils.helpers import normalize_category
+from flask_login import current_user
+from app.customer.services import normalize_static_path
 from app.utils.constants import TryOnCategory
+from app.core.models import User, Store, TryOn
+from app.core.database import db
+from app.utils.tryon import process_tryon
+from app.utils.helpers import save_file
+from app.utils.helpers import normalize_category
 import os
 import requests
 from base64 import b64encode
@@ -12,7 +18,9 @@ import jsonify
 from werkzeug.utils import secure_filename
 from enum import Enum
 from typing import Optional
-import time
+import uuid
+import asyncio
+import requests
 
 
 load_dotenv()
@@ -159,81 +167,57 @@ async def process_customer_tryon(model_image, garment_image, category):
         current_app.logger.error(traceback.format_exc())
         return None
 
-async def process_tryon(model_image_path, garment_image_path, category, output_folder=None):
-    """
-    Process the TryOn request with category validation.
-    
-    Args:
-        model_image_path: Path to model image file
-        garment_image_path: Path to garment image file
-        category: Category of garment
-        output_folder: Optional folder to save result image (defaults to static/tryon-images)
+    async def process_tryon(model_image_path, garment_image_path, category, output_folder=None):
+        """
+        Process the TryOn request with category validation.
         
-    Returns:
-        str: Relative path to the result image within static folder
-    """
-    try:
-        # Set default output folder if not provided
-        if not output_folder:
-            output_folder = os.path.join(current_app.static_folder, 'tryon-images')
-        
-        # Ensure output directory exists
-        os.makedirs(output_folder, exist_ok=True)
+        Args:
+            model_image_path: Path to model image file
+            garment_image_path: Path to garment image file
+            category: Category of garment
+            output_folder: Optional folder to save result image (defaults to static/tryon-images)
             
-        # Normalize the category using the shared function
-        normalized_category = normalize_category(category)
-        if not normalized_category:
-            raise ValueError(f"Invalid category: {category}. Allowed categories: {[c.value for c in TryOnCategory]}")
-        
-        # Map our internal categories to FAL API categories if needed
-        fal_category_map = {
-            TryOnCategory.TOPS.value: "tops",
-            TryOnCategory.BOTTOMS.value: "bottoms",
-            TryOnCategory.DRESSES.value: "one-pieces",
-            TryOnCategory.OUTERWEAR.value: "tops"  # FAL might not have outerwear, so map to tops
-        }
-        
-        fal_category = fal_category_map.get(normalized_category)
-        model_image_base64 = encode_image_to_base64(model_image_path)
-        garment_image_base64 = encode_image_to_base64(garment_image_path)
-        
-        def on_queue_update(update):
-            if isinstance(update, fal_client.InProgress):
-                for log in update.logs:
-                    current_app.logger.debug(f"TryOn Progress: {log['message']}")
-        
-        # Handle event loop issues
+        Returns:
+            str: Relative path to the result image within static folder
+        """
         try:
-            result = await fal_client.subscribe_async(
-                "fashn/tryon",
-                arguments={
-                    "model_image": model_image_base64,
-                    "garment_image": garment_image_base64,
-                    "category": fal_category,  # Use mapped category for FAL API
-                    "garment_photo_type": "auto",
-                    "nsfw_filter": True,
-                    "guidance_scale": 2,
-                    "timesteps": 50,
-                    "seed": 42,
-                    "num_samples": 1
-                },
-                with_logs=True,
-                on_queue_update=on_queue_update
-            )
-        except RuntimeError as e:
-            if "Event loop is closed" in str(e):
-                # Create a new event loop and try again
-                current_app.logger.warning("Event loop closed during FAL API call, creating new loop")
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
+            # Set default output folder if not provided
+            if not output_folder:
+                output_folder = os.path.join(current_app.static_folder, 'tryon-images')
+            
+            # Ensure output directory exists
+            os.makedirs(output_folder, exist_ok=True)
                 
-                # Retry with new loop
+            # Normalize the category using the shared function
+            normalized_category = normalize_category(category)
+            if not normalized_category:
+                raise ValueError(f"Invalid category: {category}. Allowed categories: {[c.value for c in TryOnCategory]}")
+            
+            # Map our internal categories to FAL API categories if needed
+            fal_category_map = {
+                TryOnCategory.TOPS.value: "tops",
+                TryOnCategory.BOTTOMS.value: "bottoms",
+                TryOnCategory.DRESSES.value: "one-pieces",
+                TryOnCategory.OUTERWEAR.value: "tops"  # FAL might not have outerwear, so map to tops
+            }
+            
+            fal_category = fal_category_map.get(normalized_category)
+            model_image_base64 = encode_image_to_base64(model_image_path)
+            garment_image_base64 = encode_image_to_base64(garment_image_path)
+            
+            def on_queue_update(update):
+                if isinstance(update, fal_client.InProgress):
+                    for log in update.logs:
+                        current_app.logger.debug(f"TryOn Progress: {log['message']}")
+            
+            # Handle event loop issues
+            try:
                 result = await fal_client.subscribe_async(
                     "fashn/tryon",
                     arguments={
                         "model_image": model_image_base64,
                         "garment_image": garment_image_base64,
-                        "category": fal_category,
+                        "category": fal_category,  # Use mapped category for FAL API
                         "garment_photo_type": "auto",
                         "nsfw_filter": True,
                         "guidance_scale": 2,
@@ -244,46 +228,70 @@ async def process_tryon(model_image_path, garment_image_path, category, output_f
                     with_logs=True,
                     on_queue_update=on_queue_update
                 )
-            else:
-                raise
-        
-        if result and 'images' in result and len(result['images']) > 0:
-            image_url = result['images'][0]['url']
+            except RuntimeError as e:
+                if "Event loop is closed" in str(e):
+                    # Create a new event loop and try again
+                    current_app.logger.warning("Event loop closed during FAL API call, creating new loop")
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    
+                    # Retry with new loop
+                    result = await fal_client.subscribe_async(
+                        "fashn/tryon",
+                        arguments={
+                            "model_image": model_image_base64,
+                            "garment_image": garment_image_base64,
+                            "category": fal_category,
+                            "garment_photo_type": "auto",
+                            "nsfw_filter": True,
+                            "guidance_scale": 2,
+                            "timesteps": 50,
+                            "seed": 42,
+                            "num_samples": 1
+                        },
+                        with_logs=True,
+                        on_queue_update=on_queue_update
+                    )
+                else:
+                    raise
             
-            # Generate unique filename with timestamp
-            import uuid
-            timestamp = int(time.time())
-            random_id = uuid.uuid4().hex[:8]
-            filename = f"tryon_result_{timestamp}_{random_id}.png"
-            
-            # Full path where image will be saved
-            full_save_path = os.path.join(output_folder, filename)
-            
-            # Download and save the image
-            response = requests.get(image_url)
-            response.raise_for_status()
-            
-            with open(full_save_path, 'wb') as f:
-                f.write(response.content)
-            
-            # Verify file was saved
-            if not os.path.exists(full_save_path):
-                raise ValueError(f"Failed to save image to {full_save_path}")
+            if result and 'images' in result and len(result['images']) > 0:
+                image_url = result['images'][0]['url']
                 
-            current_app.logger.debug(f"TryOn result saved to: {full_save_path}")
-            
-            # Return path relative to static folder
-            static_folder = current_app.static_folder
-            if full_save_path.startswith(static_folder):
-                relative_path = os.path.relpath(full_save_path, static_folder)
-            else:
-                relative_path = os.path.join('tryon-images', filename)
+                # Generate unique filename with timestamp
+                import uuid
+                timestamp = int(time.time())
+                random_id = uuid.uuid4().hex[:8]
+                filename = f"tryon_result_{timestamp}_{random_id}.png"
                 
-            current_app.logger.debug(f"Relative path for static URL: {relative_path}")
-            return relative_path
+                # Full path where image will be saved
+                full_save_path = os.path.join(output_folder, filename)
+                
+                # Download and save the image
+                response = requests.get(image_url)
+                response.raise_for_status()
+                
+                with open(full_save_path, 'wb') as f:
+                    f.write(response.content)
+                
+                # Verify file was saved
+                if not os.path.exists(full_save_path):
+                    raise ValueError(f"Failed to save image to {full_save_path}")
+                    
+                current_app.logger.debug(f"TryOn result saved to: {full_save_path}")
+                
+                # Return path relative to static folder
+                static_folder = current_app.static_folder
+                if full_save_path.startswith(static_folder):
+                    relative_path = os.path.relpath(full_save_path, static_folder)
+                else:
+                    relative_path = os.path.join('tryon-images', filename)
+                    
+                current_app.logger.debug(f"Relative path for static URL: {relative_path}")
+                return relative_path
+                
+            return None
             
-        return None
-        
-    except Exception as e:
-        current_app.logger.error(f"Error in process_tryon: {str(e)}")
-        return None
+        except Exception as e:
+            current_app.logger.error(f"Error in process_tryon: {str(e)}")
+            return None
