@@ -63,6 +63,7 @@ class TryOn(db.Model):
     result_image = db.Column(db.String(255), nullable=False)  # Output try-on result
     category = db.Column(db.String(50), nullable=False)  # Clothing category
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    model_type = db.Column(db.String(20), nullable=True, default="fashn")
     credits_source = db.Column(db.String(20), nullable=False, default='user')
 
     # Relationships

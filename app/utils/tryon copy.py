@@ -58,7 +58,7 @@ def download_and_save_image(url, filename):
 
 
 
-async def process_customer_tryon(model_image, garment_image, category, model_type="fashn"):
+async def process_customer_tryon(model_image, garment_image, category):
     """
     Process a new TryOn request.
     
@@ -66,13 +66,12 @@ async def process_customer_tryon(model_image, garment_image, category, model_typ
         model_image: FileStorage object for model image
         garment_image: FileStorage object for garment image
         category: String indicating garment category
-        model_type: Type of model to use ("fashn" or "kolors")
         
     Returns:
         str: Path to output image relative to static folder, or None if failed
     """
     try:
-        current_app.logger.debug(f"Starting TryOn processing for category: {category} with model: {model_type}")
+        current_app.logger.debug(f"Starting TryOn processing for category: {category}")
         
         model_filename = secure_filename(f"model_{category}_{model_image.filename}")
         garment_filename = secure_filename(f"garment_{category}_{garment_image.filename}")
@@ -97,15 +96,10 @@ async def process_customer_tryon(model_image, garment_image, category, model_typ
             os.makedirs(full_tryon_results_path, exist_ok=True)
             current_app.logger.debug(f"TryOn results folder: {full_tryon_results_path}")
 
-            # Process the try-on request with specified output folder and model type
+            # Process the try-on request with specified output folder
             try:
-                result = await process_tryon(
-                    model_path, 
-                    garment_path, 
-                    category, 
-                    output_folder=full_tryon_results_path,
-                    model_type=model_type
-                )
+                # Use a task to better manage the event loop
+                result = await process_tryon(model_path, garment_path, category, output_folder=full_tryon_results_path)
                 current_app.logger.debug(f"Raw result from process_tryon: {result}")
             except RuntimeError as e:
                 if "Event loop is closed" in str(e):
@@ -115,13 +109,7 @@ async def process_customer_tryon(model_image, garment_image, category, model_typ
                     asyncio.set_event_loop(loop)
                     
                     # Try again with the new loop
-                    result = await process_tryon(
-                        model_path, 
-                        garment_path, 
-                        category, 
-                        output_folder=full_tryon_results_path,
-                        model_type=model_type
-                    )
+                    result = await process_tryon(model_path, garment_path, category, output_folder=full_tryon_results_path)
                     current_app.logger.debug(f"Result from new event loop: {result}")
                 else:
                     raise
@@ -146,7 +134,7 @@ async def process_customer_tryon(model_image, garment_image, category, model_typ
                 current_app.logger.error(f"Result file is not readable: {result_full_path}")
                 return None
 
-            # Create TryOn record - add model_type to the database record
+            # Create TryOn record
             tryon = TryOn(
                 user_id=current_user.id,
                 store_id=current_user.store_id,
@@ -154,8 +142,7 @@ async def process_customer_tryon(model_image, garment_image, category, model_typ
                 model_image=normalize_static_path(model_path),
                 garment_image=normalize_static_path(garment_path),
                 result_image=result,
-                credits_source='user' if current_user.credit_balance >= 1 else 'store',
-                model_type=model_type  # Add this field to your TryOn model
+                credits_source='user' if current_user.credit_balance >= 1 else 'store'
             )
             db.session.add(tryon)
             db.session.commit()
@@ -180,8 +167,7 @@ async def process_customer_tryon(model_image, garment_image, category, model_typ
         return None
 
 
-        
-async def process_tryon(model_image_path, garment_image_path, category, output_folder=None, model_type="fashn"):
+async def process_tryon(model_image_path, garment_image_path, category, output_folder=None):
     """
     Process the TryOn request with category validation.
     
@@ -190,7 +176,6 @@ async def process_tryon(model_image_path, garment_image_path, category, output_f
         garment_image_path: Path to garment image file
         category: Category of garment
         output_folder: Optional folder to save result image (defaults to static/tryon-images)
-        model_type: Type of model to use ("fashn" or "kolors")
         
     Returns:
         str: Relative path to the result image within static folder
@@ -203,72 +188,43 @@ async def process_tryon(model_image_path, garment_image_path, category, output_f
         # Ensure output directory exists
         os.makedirs(output_folder, exist_ok=True)
             
-        # For the Fashn model, we need to normalize the category
-        normalized_category = None
-        fal_category = None
+        # Normalize the category using the shared function
+        normalized_category = normalize_category(category)
+        if not normalized_category:
+            raise ValueError(f"Invalid category: {category}. Allowed categories: {[c.value for c in TryOnCategory]}")
         
-        if model_type.lower() == "fashn":
-            # Normalize the category using the shared function
-            normalized_category = normalize_category(category)
-            if not normalized_category:
-                raise ValueError(f"Invalid category: {category}. Allowed categories: {[c.value for c in TryOnCategory]}")
-            
-            # Map our internal categories to FAL API categories if needed
-            fal_category_map = {
-                TryOnCategory.TOPS.value: "tops",
-                TryOnCategory.BOTTOMS.value: "bottoms",
-                TryOnCategory.DRESSES.value: "one-pieces",
-                TryOnCategory.OUTERWEAR.value: "tops"  # FAL might not have outerwear, so map to tops
-            }
-            
-            fal_category = fal_category_map.get(normalized_category)
+        # Map our internal categories to FAL API categories if needed
+        fal_category_map = {
+            TryOnCategory.TOPS.value: "tops",
+            TryOnCategory.BOTTOMS.value: "bottoms",
+            TryOnCategory.DRESSES.value: "one-pieces",
+            TryOnCategory.OUTERWEAR.value: "tops"  # FAL might not have outerwear, so map to tops
+        }
         
-        # Convert images to base64 (used by both models)
+        fal_category = fal_category_map.get(normalized_category)
         model_image_base64 = encode_image_to_base64(model_image_path)
         garment_image_base64 = encode_image_to_base64(garment_image_path)
         
         def on_queue_update(update):
             if isinstance(update, fal_client.InProgress):
                 for log in update.logs:
-                    current_app.logger.debug(f"{model_type} TryOn Progress: {log['message']}")
-        
-        # Map model_type to actual FAL API model names
-        fal_model_map = {
-            "fashn": "fashn/tryon",
-            "kolors": "fal-ai/kling/v1-5/kolors-virtual-try-on"
-        }
-        
-        # Get the correct FAL model name based on model_type
-        model_name = fal_model_map.get(model_type.lower())
-        if not model_name:
-            raise ValueError(f"Invalid model_type: {model_type}. Supported types: fashn, kolors")
-            
-        current_app.logger.debug(f"Using FAL model: {model_name}")
-        
-        # Set up the appropriate model arguments based on the selected model
-        if model_type.lower() == "kolors":
-            model_args = {
-                "human_image_url": model_image_base64,
-                "garment_image_url": garment_image_base64
-            }
-        else:  # Default to fashn model
-            model_args = {
-                "model_image": model_image_base64,
-                "garment_image": garment_image_base64,
-                "category": fal_category,
-                "garment_photo_type": "auto",
-                "nsfw_filter": True,
-                "guidance_scale": 2,
-                "timesteps": 50,
-                "seed": 42,
-                "num_samples": 1
-            }
+                    current_app.logger.debug(f"TryOn Progress: {log['message']}")
         
         # Handle event loop issues
         try:
             result = await fal_client.subscribe_async(
-                model_name,
-                arguments=model_args,
+                "fashn/tryon",
+                arguments={
+                    "model_image": model_image_base64,
+                    "garment_image": garment_image_base64,
+                    "category": fal_category,  # Use mapped category for FAL API
+                    "garment_photo_type": "auto",
+                    "nsfw_filter": True,
+                    "guidance_scale": 2,
+                    "timesteps": 50,
+                    "seed": 42,
+                    "num_samples": 1
+                },
                 with_logs=True,
                 on_queue_update=on_queue_update
             )
@@ -281,8 +237,18 @@ async def process_tryon(model_image_path, garment_image_path, category, output_f
                 
                 # Retry with new loop
                 result = await fal_client.subscribe_async(
-                    model_name,
-                    arguments=model_args,
+                    "fashn/tryon",
+                    arguments={
+                        "model_image": model_image_base64,
+                        "garment_image": garment_image_base64,
+                        "category": fal_category,
+                        "garment_photo_type": "auto",
+                        "nsfw_filter": True,
+                        "guidance_scale": 2,
+                        "timesteps": 50,
+                        "seed": 42,
+                        "num_samples": 1
+                    },
                     with_logs=True,
                     on_queue_update=on_queue_update
                 )
@@ -296,7 +262,7 @@ async def process_tryon(model_image_path, garment_image_path, category, output_f
             import uuid
             timestamp = int(time.time())
             random_id = uuid.uuid4().hex[:8]
-            filename = f"{model_type}_result_{timestamp}_{random_id}.png"
+            filename = f"tryon_result_{timestamp}_{random_id}.png"
             
             # Full path where image will be saved
             full_save_path = os.path.join(output_folder, filename)
@@ -312,7 +278,7 @@ async def process_tryon(model_image_path, garment_image_path, category, output_f
             if not os.path.exists(full_save_path):
                 raise ValueError(f"Failed to save image to {full_save_path}")
                 
-            current_app.logger.debug(f"{model_type} TryOn result saved to: {full_save_path}")
+            current_app.logger.debug(f"TryOn result saved to: {full_save_path}")
             
             # Return path relative to static folder
             static_folder = current_app.static_folder
@@ -327,5 +293,5 @@ async def process_tryon(model_image_path, garment_image_path, category, output_f
         return None
         
     except Exception as e:
-        current_app.logger.error(f"Error in process_tryon with model {model_type}: {str(e)}")
+        current_app.logger.error(f"Error in process_tryon: {str(e)}")
         return None

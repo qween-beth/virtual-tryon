@@ -2,6 +2,7 @@ from app import create_app
 from flask import Flask, render_template, request, url_for, send_from_directory, jsonify, session, redirect
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, current_user
+#from flask_wtf import CSRFProtect
 from app.core.models import db, User, Store, Feature
 from werkzeug.security import generate_password_hash, check_password_hash
 import asyncio
@@ -14,13 +15,18 @@ from dotenv import load_dotenv
 import os
 from hypercorn.config import Config
 from hypercorn.asyncio import serve
-
-
 from app import create_app
 from app.core.models import db
 from werkzeug.security import generate_password_hash
 import os
 from dotenv import load_dotenv
+from app import create_app
+from flask_wtf.csrf import CSRFProtect
+
+
+# Create the application instance
+app = create_app()
+csrf = CSRFProtect(app)
 
 # Load environment variables
 load_dotenv()
@@ -57,7 +63,8 @@ def seed_database(app):
                 admin = User(
                     email='admin@example.com',
                     password_hash=generate_password_hash('admin'),
-                    role='admin'
+                    role='admin',
+                    credit_balance=1000  # Set initial credit balance for admin
                 )
                 db.session.add(admin)
                 print("Created admin user")
@@ -71,20 +78,47 @@ def seed_database(app):
                     credit_balance=100
                 )
                 db.session.add(default_store)
-                db.session.commit()  # Commit to get the store ID
+                db.session.commit()  # Commit to get store ID
                 print("Created default store")
 
-            # Create default store user if needed
-            store_user = User.query.filter_by(email='user@example.com').first()
-            if not store_user:
-                store_user = User(
-                    email='user@example.com',
-                    password_hash=generate_password_hash('user'),
+            # Create default store owner
+            store_owner = User.query.filter_by(email='store@example.com').first()
+            if not store_owner:
+                store_owner = User(
+                    email='store@example.com',
+                    password_hash=generate_password_hash('store'),
                     role='store',
-                    store_id=default_store.id
+                    store_id=default_store.id,  # Store owners must be linked to a store
+                    credit_balance=500  # Set initial credit balance for store owner
                 )
-                db.session.add(store_user)
-                print("Created store user")
+                db.session.add(store_owner)
+                print("Created store owner")
+
+            # Create default customer assigned to the store
+            store_customer = User.query.filter_by(email='store-customer@example.com').first()
+            if not store_customer:
+                store_customer = User(
+                    email='store-customer@example.com',
+                    password_hash=generate_password_hash('customer'),
+                    role='customer',
+                    store_id=default_store.id,  # Store customers belong to a store
+                    credit_balance=100  # Set initial credit balance for store customer
+                )
+                db.session.add(store_customer)
+                print("Created store customer")
+
+            # Create a general customer (no store)
+            general_customer = User.query.filter_by(email='general-customer@example.com').first()
+            if not general_customer:
+                general_customer = User(
+                    email='general-customer@example.com',
+                    password_hash=generate_password_hash('customer'),
+                    role='customer',
+                    store_id=None,  # General customers have no store association
+                    credit_balance=5  # Set initial credit balance for general customer
+                )
+                db.session.add(general_customer)
+                print("Created general customer (no store)")
 
             # Add default features if needed
             default_features = [
@@ -112,8 +146,7 @@ def seed_database(app):
         print(f"Error seeding database: {str(e)}")
         raise
 
-# Create the application instance
-app = create_app()
+
 
 if __name__ == "__main__":
     # Seed the database when running directly

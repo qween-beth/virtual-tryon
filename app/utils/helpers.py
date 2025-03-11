@@ -1,10 +1,31 @@
 import os
-
+from flask import current_app
 
 
 def get_env_variable(key, default=None):
     return os.getenv(key, default)
 
+def normalize_static_path(path):
+    """
+    Converts any path to a proper static URL path.
+    
+    Args:
+        path (str): File path to normalize
+        
+    Returns:
+        str: Normalized path relative to static folder with forward slashes
+    """
+    if os.path.isabs(path):
+        static_folder = current_app.static_folder
+        if path.startswith(static_folder):
+            rel_path = os.path.relpath(path, static_folder)
+        else:
+            rel_path = os.path.basename(path)
+    else:
+        rel_path = path
+    
+    # Replace backslashes with forward slashes for URLs
+    return rel_path.replace('\\', '/')
 
 
 def save_file(file, folder, filename):

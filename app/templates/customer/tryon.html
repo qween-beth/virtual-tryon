@@ -70,6 +70,18 @@
                     </select>
                 </div>
 
+                <!-- NEW: Model Type Selection -->
+                <div class="form-group">
+                    <label>Model Type</label>
+                    <select name="model_type" id="model_type" required style="width: 100%; padding: 0.75rem; border: 1px solid rgba(106, 13, 173, 0.2); border-radius: 8px;">
+                        <option value="fashn">Fashn (Best for various garment types)</option>
+                        <option value="kolors">Kolors (Enhanced quality)</option>
+                    </select>
+                    <p style="color: #666; font-size: 0.8rem; margin-top: 0.5rem;">
+                        Note: Kolors may provide better results for certain garments.
+                    </p>
+                </div>
+
                 <button type="submit" class="submit-button" style="width: 100%; margin-top: 1rem;">
                     Generate Try-On
                 </button>
@@ -90,6 +102,11 @@
         <div class="auth-form-container" id="resultsSection" style="display: {{ 'block' if output_image else 'none' }};">
             <div class="auth-header">
                 <h2>Results</h2>
+                <div id="model-type-info" style="font-size: 0.9rem; color: #555; margin-top: 0.25rem;">
+                    {% if model_type %}
+                    Generated using {{ model_type|capitalize }} model
+                    {% endif %}
+                </div>
             </div>
 
             <div id="results-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
@@ -119,11 +136,51 @@
                 <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
                     <div style="padding: 1rem;">
                         <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: #1a1a1a;">Try-On Result</h3>
-                        <img src="{{ output_image }}" alt="Result" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
+                        <img src="{{ output_image }}" alt="Result" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; cursor: pointer;" 
+                             onclick="openImageModal('{{ output_image }}')">
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                            <button onclick="downloadImage('{{ output_image }}', 'try-on-result.jpg')" 
+                                    style="background: linear-gradient(135deg, #6a0dad, #4169e1); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; flex: 1; display: flex; align-items: center; justify-content: center;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.25rem;">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                Download
+                            </button>
+                            <button onclick="openImageModal('{{ output_image }}')"
+                                    style="background: white; color: #6a0dad; border: 1px solid #6a0dad; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; flex: 1; display: flex; align-items: center; justify-content: center;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.25rem;">
+                                    <path d="M15 3h6v6"></path>
+                                    <path d="M10 14L21 3"></path>
+                                    <path d="M19 10v11H3V5h11"></path>
+                                </svg>
+                                View Larger
+                            </button>
+                        </div>
                     </div>
                 </div>
                 {% endif %}
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Image Modal -->
+<div id="imageModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); overflow: auto;">
+    <div style="position: relative; margin: 2rem auto; width: 80%; max-width: 800px;">
+        <span id="closeModal" style="position: absolute; top: -40px; right: 0; color: white; font-size: 2rem; cursor: pointer;">&times;</span>
+        <img id="modalImage" style="display: block; width: 100%; border-radius: 8px;">
+        <div style="margin-top: 1rem; text-align: center;">
+            <button id="downloadModalBtn" 
+                    style="background: linear-gradient(135deg, #6a0dad, #4169e1); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem; vertical-align: middle;">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Download Image
+            </button>
         </div>
     </div>
 </div>
@@ -137,6 +194,54 @@ function debugLog(message, data) {
     if (DEBUG) {
         console.log(`[DEBUG] ${message}`, data || '');
     }
+}
+
+// Image modal functions
+function openImageModal(imageSrc) {
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('modalImage');
+    const downloadBtn = document.getElementById('downloadModalBtn');
+    
+    modal.style.display = "block";
+    modalImg.src = imageSrc;
+    
+    // Set download button action
+    downloadBtn.onclick = function() {
+        downloadImage(imageSrc, 'try-on-result.jpg');
+    };
+}
+
+// Close modal when clicking the X
+document.addEventListener('DOMContentLoaded', function() {
+    const closeBtn = document.getElementById('closeModal');
+    if (closeBtn) {
+        closeBtn.onclick = function() {
+            document.getElementById('imageModal').style.display = "none";
+        }
+    }
+    
+    // Close modal when clicking outside the image
+    const modal = document.getElementById('imageModal');
+    if (modal) {
+        modal.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = "none";
+            }
+        }
+    }
+});
+
+// Function to download image
+function downloadImage(imageSrc, filename) {
+    debugLog(`Downloading image: ${filename}`, imageSrc);
+    
+    // Create a temporary anchor element
+    const a = document.createElement('a');
+    a.href = imageSrc;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 }
 
 // Utility function to safely display images
@@ -306,6 +411,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const modelInput = document.getElementById('model_image');
         const garmentInput = document.getElementById('garment_image');
         const categorySelect = document.getElementById('category');
+        const modelTypeSelect = document.getElementById('model_type'); // NEW: Get model type
         const errorDiv = document.getElementById('error-message');
         const errorText = errorDiv.querySelector('p');
         const resultsSection = document.getElementById('resultsSection');
@@ -345,6 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('model_image', modelInput.files[0]);
         formData.append('garment_image', garmentInput.files[0]);
         formData.append('category', categorySelect.value);
+        formData.append('model_type', modelTypeSelect.value); // NEW: Add model type to form data
         
         // Add CSRF token if available
         const csrfToken = document.querySelector('input[name="csrf_token"]');
@@ -354,88 +461,114 @@ document.addEventListener('DOMContentLoaded', function() {
         
         debugLog('Sending AJAX request', {
             category: categorySelect.value,
+            modelType: modelTypeSelect.value,
             modelFile: modelInput.files[0].name,
             garmentFile: garmentInput.files[0].name
         });
             
-            // Send AJAX request to backend
-            fetch('/customer/tryon', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    ...(csrfToken && {'X-CSRFToken': csrfToken.value})
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.text().then(text => {
-                        try {
-                            // Try to parse as JSON first
-                            return Promise.reject(JSON.parse(text));
-                        } catch (e) {
-                            // If not JSON, return text as error
-                            return Promise.reject({ error: "Server error: " + text.substring(0, 100) + "..." });
-                        }
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.error) {
-                    // Show error message
-                    errorText.textContent = data.error;
-                    errorDiv.style.display = 'flex';
-                } else if (data.success) {
-                    // Update credit balance from server response
-                    creditBalance.textContent = data.remaining_credits;
-                    
-                    // Show results section and clear previous results
-                    resultsSection.style.display = 'block';
-                    resultsContainer.innerHTML = '';
-                    
-                    // Add model preview
-                    resultsContainer.innerHTML += `
-                        <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                            <div style="padding: 1rem;">
-                                <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: #1a1a1a;">Model Image</h3>
-                                <img src="${URL.createObjectURL(modelInput.files[0])}" alt="Model" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
-                            </div>
-                        </div>
-                    `;
-                    
-                    // Add garment preview
-                    resultsContainer.innerHTML += `
-                        <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                            <div style="padding: 1rem;">
-                                <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: #1a1a1a;">Garment Image</h3>
-                                <img src="${URL.createObjectURL(garmentInput.files[0])}" alt="Garment" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
-                            </div>
-                        </div>
-                    `;
-                    
-                    // Add result image - using data.output_image consistently
-                    resultsContainer.innerHTML += `
-                        <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                            <div style="padding: 1rem;">
-                                <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: #1a1a1a;">Try-On Result</h3>
-                                <img src="${data.output_image}" alt="Result" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
-                            </div>
-                        </div>
-                    `;
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                errorText.textContent = error.error || "An unexpected error occurred. Please try again.";
+        // Send AJAX request to backend
+        fetch('/customer/tryon', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                ...(csrfToken && {'X-CSRFToken': csrfToken.value})
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    try {
+                        // Try to parse as JSON first
+                        return Promise.reject(JSON.parse(text));
+                    } catch (e) {
+                        // If not JSON, return text as error
+                        return Promise.reject({ error: "Server error: " + text.substring(0, 100) + "..." });
+                    }
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                // Show error message
+                errorText.textContent = data.error;
                 errorDiv.style.display = 'flex';
-            })
-            .finally(() => {
-                // Reset button state
-                submitButton.textContent = originalButtonText;
-                submitButton.disabled = false;
-            });
+            } else if (data.success) {
+                // Update credit balance from server response
+                creditBalance.textContent = data.remaining_credits;
+                
+                // Show results section and clear previous results
+                resultsSection.style.display = 'block';
+                resultsContainer.innerHTML = '';
+                
+                // Update model type info
+                const modelTypeInfo = document.getElementById('model-type-info');
+                modelTypeInfo.textContent = `Generated using ${modelTypeSelect.value.charAt(0).toUpperCase() + modelTypeSelect.value.slice(1)} model`;
+                
+                // Add model preview
+                resultsContainer.innerHTML += `
+                    <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                        <div style="padding: 1rem;">
+                            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: #1a1a1a;">Model Image</h3>
+                            <img src="${URL.createObjectURL(modelInput.files[0])}" alt="Model" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
+                        </div>
+                    </div>
+                `;
+                
+                // Add garment preview
+                resultsContainer.innerHTML += `
+                    <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                        <div style="padding: 1rem;">
+                            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: #1a1a1a;">Garment Image</h3>
+                            <img src="${URL.createObjectURL(garmentInput.files[0])}" alt="Garment" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
+                        </div>
+                    </div>
+                `;
+                
+                // Add result image with buttons for download and view larger
+                resultsContainer.innerHTML += `
+                    <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                        <div style="padding: 1rem;">
+                            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: #1a1a1a;">Try-On Result</h3>
+                            <img src="${data.output_image}" alt="Result" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; cursor: pointer;" 
+                                 onclick="openImageModal('${data.output_image}')">
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                                <button onclick="downloadImage('${data.output_image}', 'try-on-result.jpg')" 
+                                        style="background: linear-gradient(135deg, #6a0dad, #4169e1); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; flex: 1; display: flex; align-items: center; justify-content: center;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.25rem;">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                    Download
+                                </button>
+                                <button onclick="openImageModal('${data.output_image}')"
+                                        style="background: white; color: #6a0dad; border: 1px solid #6a0dad; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; flex: 1; display: flex; align-items: center; justify-content: center;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.25rem;">
+                                        <path d="M15 3h6v6"></path>
+                                        <path d="M10 14L21 3"></path>
+                                        <path d="M19 10v11H3V5h11"></path>
+                                    </svg>
+                                    View Larger
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            errorText.textContent = error.error || "An unexpected error occurred. Please try again.";
+            errorDiv.style.display = 'flex';
+        })
+        .finally(() => {
+            // Reset button state
+            submitButton.textContent = originalButtonText;
+            submitButton.disabled = false;
         });
     });
+});
 </script>
 {% endblock %}
