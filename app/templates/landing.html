@@ -95,27 +95,38 @@
     }
 
     /* Hero Section */
-    .hero-section {
-      display: flex;
-      align-items: center;
-      min-height: 100vh;
-      padding-top: 80px;
-      background: linear-gradient(135deg, rgba(106, 13, 173, 0.05), rgba(65, 105, 225, 0.05));
-    }
+.hero-section {
+  display: flex;
+  align-items: center;
+  min-height: 100vh;
+  padding-top: 80px;
+  background: linear-gradient(135deg, rgba(106, 13, 173, 0.05), rgba(65, 105, 225, 0.05));
+}
 
-    .hero-content {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      align-items: center;
-      gap: 4rem;
-      padding: 0 2rem;
-    }
+.hero-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 50% 50%; /* Exactly 50/50 split */
+  align-items: center;
+  gap: 4rem;
+  padding: 0 2rem;
+}
 
-    .hero-text {
-      max-width: 550px;
-    }
+/* Image container */
+.hero-content > div:last-child {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.hero-image {
+  width: 60%; /* Take full width of its 50% container */
+  height: auto;
+  object-fit: contain;
+  margin: 0;
+}
 
     .hero-title {
       font-size: 3.5rem;
@@ -133,12 +144,7 @@
       font-size: 1.2rem;
       margin-bottom: 2.5rem;
     }
-
-    .hero-image {
-      max-width: 100%;
-      border-radius: 20px;
-      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.1);
-    }
+    
 
     .cta-buttons {
       display: flex;
@@ -503,25 +509,22 @@
         <div class="hero-text">
           <h1 class="hero-title">Experience Fashion Like Never Before</h1>
           <p class="hero-description">
-            Our AI-powered virtual try-on technology lets you see how clothes look on you instantly, 
+            Our AI-powered virtual try-on technology lets you see how clothes look on you instantly,
             without leaving your home. Make confident fashion choices with just a click.
           </p>
           <div class="cta-buttons">
-            <a href="#get-started" class="primary-cta">Get Started</a>
-            <a href="#demo" class="secondary-cta">
+            <a href="{{ url_for('auth.register') }}" class="primary-cta">Get Started</a>
+            <a href="#" class="secondary-cta">
               <i class="fas fa-play-circle"></i> Watch Demo
             </a>
           </div>
         </div>
         <div>
-          <video controls autoplay muted loop class="hero-image">
-            <source src="demo.mp4" type="video/mp4">
-            Your browser does not support the video tag.
-          </video>
+          <img src="{{ url_for('static', filename='images/demo.gif') }}" alt="Virtual Try-On Demonstration" class="hero-image">
         </div>
       </div>
     </section>
-    
+
     <section class="features-section" id="features">
       <div class="features-grid">
         <div class="feature-card">
@@ -581,11 +584,11 @@
         <p style="color: var(--text-light);">Our AI instantly shows how each item fits your body shape and style.</p>
       </div>
       
-      <div class="step-card" style="display: flex; flex-direction: column; align-items: center;">
+      <!-- <div class="step-card" style="display: flex; flex-direction: column; align-items: center;">
         <div style="background: var(--gradient); color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-bottom: 1.5rem;">4</div>
         <h3 style="font-size: 1.3rem; margin-bottom: 1rem;">Shop Confidently</h3>
         <p style="color: var(--text-light);">Purchase your favorite pieces directly through our secure platform.</p>
-      </div>
+      </div> -->
     </div>
   </div>
 </section>
